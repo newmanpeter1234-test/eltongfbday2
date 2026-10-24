@@ -216,21 +216,44 @@
     });
   }
 
-  function trackChapters() {
-    if (!HAS_GSAP) return;
-    const visible = CHAPTERS.filter(function (c) { return c.id !== 'finale'; });
-    visible.forEach(function (c, i) {
-      const node = document.getElementById(c.id);
-      if (!node) return;
-      const next = visible[i + 1];
-      ScrollTrigger.create({
-        trigger: node,
-        start: 'top 55%',
-        endTrigger: next ? document.getElementById(next.id) : node,
-        end: next ? 'top 55%' : 'bottom 55%',
-        onToggle: function (self) { if (self.isActive) setChapter(i); }
-      });
+  function computeChapter() {
+    const marker = window.innerHeight * 0.55;
+    let idx = 0;
+    for (let i = 0; i < CHAPTERS.length; i++) {
+      if (CHAPTERS[i].id === 'finale') continue;
+      const node = document.getElementById(CHAPTERS[i].id);
+      if (!node) continue;
+      const r = node.getBoundingClientRect();
+      /* A pinned section keeps its trigger pinned at top:0 while ScrollTrigger
+         extends it with a spacer, so its rect no longer marks where we are.
+         The spacer does — it sits above the next chapter in document order. */
+      const spacer = node.parentElement && node.parentElement.classList.contains('pin-spacer')
+        ? node.parentElement
+        : null;
+      const top = spacer ? spacer.getBoundingClientRect().top : r.top;
+      /* a mid-refresh measurement can momentarily report 0 for every section,
+         so require the section to genuinely hold the marker band */
+      const holds = top <= marker && (r.bottom > marker * .2 || top < -1);
+      if (holds) idx = i;
+      else if (top > marker) break;
+    }
+    setChapter(idx);
+  }
+
+  let chapterRaf = false;
+  function scheduleChapter() {
+    if (chapterRaf) return;
+    chapterRaf = true;
+    requestAnimationFrame(function () {
+      chapterRaf = false;
+      if (state === 'journey') computeChapter();
     });
+  }
+
+  function trackChapters() {
+    window.addEventListener('scroll', scheduleChapter, { passive: true });
+    window.addEventListener('resize', scheduleChapter);
+    scheduleChapter();
   }
 
   /* ══ LOADER ══════════════════════════════════════════════════════════════ */
@@ -664,6 +687,54 @@
     });
   }
 
+  /* Wait for the unfolded letter to stop growing, then frame it under the HUD.
+     ScrollTrigger's refresh and the browser's scroll anchoring can each nudge
+     the page after we move it, so we converge instead of measuring once. */
+  function settlePaper(paper) {
+    if (!paper) return;
+    /* measure the real HUD, not the custom property ("4.6rem" would parse as 4.6) */
+    const hudEl = document.getElementById('hud');
+    const hudClear = (hudEl ? hudEl.getBoundingClientRect().height : 74) + 30;
+    let pass = 0;
+
+    function snap() {
+      const drift = paper.getBoundingClientRect().top - hudClear;
+      if (Math.abs(drift) < 1) return;
+      if (lenis) lenis.scrollTo(window.scrollY + drift, { immediate: true });
+      else window.scrollTo(0, window.scrollY + drift);
+    }
+
+    function converge() {
+      pass++;
+      if (!paper.isConnected) return;
+      const top = paper.getBoundingClientRect().top;
+      const off = Math.abs(top - hudClear);
+
+      if (off > 8 && pass <= 5) snap();
+
+      if (pass >= 5) {
+        if (off > 8) snap();
+        scheduleChapter();
+        return;
+      }
+      setTimeout(function () {
+        refreshSoon(0);
+        /* let refresh settle, then re-measure and correct again */
+        setTimeout(converge, 340);
+      }, off > 8 ? 900 : 340);
+    }
+
+    const waitForHeight = function (lastH, stable) {
+      const h = paper.getBoundingClientRect().height;
+      const nextStable = Math.abs(h - lastH) < 1 ? stable + 1 : 0;
+      if (nextStable >= 3 && h > 40) { converge(); return; }
+      if (Date.now() - t0 > 2600) { converge(); return; }
+      setTimeout(function () { waitForHeight(h, nextStable); }, 110);
+    };
+    const t0 = Date.now();
+    setTimeout(function () { waitForHeight(-1, 0); }, 120);
+  }
+
   /* ══ THE WAX SEAL ════════════════════════════════════════════════════════ */
   function loveLetter() {
     const wrap = $('#envelopeWrap');
@@ -693,14 +764,9 @@
         });
       }
 
-      setTimeout(function () {
-        refreshSoon(60);
-        if (!paper) return;
-        const rect = paper.getBoundingClientRect();
-        if (rect.top > window.innerHeight * .5) {
-          scrollToEl(paper, -100);
-        }
-      }, 900);
+      /* The paper grows for ~1.3s and the browser re-anchors the page while it
+         does, so aim only once the height is stable — then verify and snap. */
+      settlePaper(paper);
     });
   }
 
@@ -1137,7 +1203,10 @@
       refreshSoon(220);
     });
 
-    window.addEventListener('resize', function () { refreshSoon(260); });
+    window.addEventListener('resize', function () {
+      refreshSoon(260);
+      scheduleChapter();
+    });
     window.addEventListener('orientationchange', function () { setTimeout(refreshSoon, 350); });
 
     if (document.fonts && document.fonts.ready) {
