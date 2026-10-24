@@ -120,10 +120,28 @@
   }
 
   let refreshTimer;
+  /* ScrollTrigger.refresh() re-measures every trigger and re-writes the pin
+     spacers, which is far too heavy to run while she is mid-scroll. Images,
+     fonts and late layout work all ask for a refresh; while a slow connection
+     is still landing images, those requests arrive one after another and used
+     to fire *during* scrolling. Coalesce them and wait for the page to settle. */
+  let lastScrollAt = 0;
+  window.addEventListener('scroll', function () { lastScrollAt = Date.now(); }, { passive: true });
+
   function refreshSoon(delay) {
     if (!HAS_GSAP) return;
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(function () { ScrollTrigger.refresh(); }, delay || 150);
+    const go = function () {
+      const quietFor = Date.now() - lastScrollAt;
+      if (quietFor < 220) {
+        refreshTimer = setTimeout(go, 220 - quietFor + 40);
+        return;
+      }
+      ScrollTrigger.refresh();
+      /* pinning rewrites the document height */
+      maxScroll = -1;
+    };
+    refreshTimer = setTimeout(go, delay || 150);
   }
 
   /* ══ SMOOTH SCROLL ═══════════════════════════════════════════════════════ */
@@ -171,12 +189,23 @@
 
   /* ══ HUD · RAIL · PROGRESS ═══════════════════════════════════════════════ */
   let progressRaf = false;
+  /* Reading scrollHeight every frame forces a full document layout on the main
+     thread — on a phone that alone can cost several milliseconds per frame.
+     The page length only changes when something is pinned, resized or loaded,
+     so cache it and let those events clear it. */
+  let maxScroll = -1;
+  function pageMax() {
+    if (maxScroll < 0) maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    return maxScroll;
+  }
+  window.addEventListener('resize', function () { maxScroll = -1; }, { passive: true });
   function updateProgress(y) {
-    if (progressRaf || (hudBar && body.classList.contains('is-finale'))) return;
+    if (!hudBar) return;
+    if (progressRaf || body.classList.contains('is-finale')) return;
     progressRaf = true;
     requestAnimationFrame(function () {
       progressRaf = false;
-      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const max = pageMax();
       const p = max > 0 ? Math.min(1, Math.max(0, y / max)) : 0;
       hudBar.style.transform = 'scaleX(' + p + ')';
     });
@@ -572,10 +601,17 @@
       }
     });
 
-    /* images change the track width — remeasure when they land */
+    /* Every image carries width/height, so a load never changes layout. Only
+       the horizontal track's own width can shift, and it is remeasured once
+       the last image has landed rather than once per image. */
+    let pending = 0;
     $$('img', track).forEach(function (img) {
       if (img.complete) return;
-      img.addEventListener('load', function () { refreshSoon(120); }, { once: true });
+      pending++;
+      img.addEventListener('load', function () {
+        pending--;
+        if (pending <= 0) refreshSoon(200);
+      }, { once: true });
     });
   }
 
@@ -1050,13 +1086,18 @@
       if (!vid || !toggle) return;
       const label  = (toggle.getAttribute('aria-label') || '').replace(/^(Play|Pause) video/, '');
 
+      /* Two stages on purpose. Warming the element only pulls the header and
+         the first frames (the mp4 is faststart), so roughly a hundred KB
+         instead of the whole file while she is still somewhere else on the
+         page. The rest follows when it actually starts playing. */
       function prime() {
         if (vid.src) return;
-        vid.preload = 'auto';
+        vid.preload = 'metadata';
         vid.src = vid.dataset.src;
       }
       function start() {
         prime();
+        vid.preload = 'auto';
         const p = vid.play();
         if (p && p.catch) {
           p.catch(function () {
@@ -1119,7 +1160,7 @@
           primer.unobserve(e.target);
         }
       });
-    }, { rootMargin: '120% 0px' });
+    }, { rootMargin: '55% 0px' });
     cards.forEach(function (c) { primer.observe(c); });
   }
 

@@ -6,3 +6,7 @@
 node_modules/
 .arena/
 *.log
+
+# original masters: kept locally for re-encoding, never shipped
+assets/videos/source-*.mp4
+assets/music/source-*.m4a

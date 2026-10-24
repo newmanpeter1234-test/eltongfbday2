@@ -128,8 +128,15 @@ html.is-locked, body.is-locked { overflow: hidden; }
   position: absolute;
   border-radius: 50%;
   filter: blur(80px);
+  /* these drift continuously, so they must stay on the compositor —
+     re-rasterising an 80px blur every frame is what causes stutter */
   will-change: transform;
   opacity: .5;
+}
+/* phones rasterise filters on the GPU far more slowly: a smaller radius is
+   visually identical at this scale and much cheaper */
+@media (max-width: 899px) {
+  .bg__orb { filter: blur(46px); }
 }
 .bg__orb--1 {
   width: 52vw; height: 52vw; left: -14vw; top: -12vw;
@@ -329,9 +336,11 @@ html.is-locked, body.is-locked { overflow: hidden; }
 .hud::before {
   content: "";
   position: absolute; inset: 0 0 -1.5rem;
-  background: linear-gradient(to bottom, rgba(6, 2, 4, .82), rgba(6, 2, 4, .34) 55%, transparent);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  /* No backdrop-filter here on purpose: a blurred layer behind fixed chrome
+     has to be re-sampled every frame the page moves, which is one of the
+     biggest scroll-jank sources on phones. The gradient alone reads the same
+     over these dark scenes. */
+  background: linear-gradient(to bottom, rgba(6, 2, 4, .88), rgba(6, 2, 4, .42) 55%, transparent);
   -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
   mask-image: linear-gradient(to bottom, #000 55%, transparent);
   pointer-events: none;
@@ -580,9 +589,7 @@ html.has-cursor [role="button"] { cursor: none; }
   padding: .5rem .95rem .5rem .6rem;
   border: 1px solid rgba(230, 203, 160, .22);
   border-radius: 999px;
-  background: rgba(9, 4, 7, .56);
-  -webkit-backdrop-filter: blur(12px) saturate(1.15);
-  backdrop-filter: blur(12px) saturate(1.15);
+  background: rgba(9, 4, 7, .78);
   box-shadow: 0 18px 40px -22px rgba(0, 0, 0, .95);
   color: rgba(250, 246, 242, .82);
   cursor: pointer;

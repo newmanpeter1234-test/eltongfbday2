@@ -38,7 +38,10 @@ const Particles = (function () {
 
   function countFor(w, h) {
     const base = (w * h) / 6800;
-    return Math.round(Math.min(180, Math.max(48, base)) * density);
+    /* phones get a lower ceiling: the ambience reads the same but the
+       per-frame drawImage count roughly halves */
+    const ceiling = Math.min(w, h) < 700 ? 120 : 180;
+    return Math.round(Math.min(ceiling, Math.max(48, base)) * density);
   }
 
   function makeParticle() {
@@ -66,7 +69,7 @@ const Particles = (function () {
   }
 
   function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = Math.min(window.devicePixelRatio || 1, window.innerWidth < 700 ? 1.5 : 2);
     W = window.innerWidth;
     H = window.innerHeight;
     cv.width = Math.round(W * dpr);
@@ -84,6 +87,9 @@ const Particles = (function () {
   }
 
   function render(t) {
+    /* sampled here rather than from a scroll listener — one read per drawn
+       frame is enough for a slow parallax and leaves the scroll path free */
+    scrollOff = window.scrollY || 0;
     ctx.clearRect(0, 0, W, H);
     if (intensity <= 0.01) return;
 
@@ -120,7 +126,9 @@ const Particles = (function () {
 
   function loop(t) {
     if (!alive) return;
-    if (t - last > 12) { render(t); last = t; }
+    /* ~40fps is indistinguishable for drifting dust and leaves the main
+       thread room for scrolling */
+    if (t - last > 24) { render(t); last = t; }
     raf = requestAnimationFrame(loop);
   }
 
@@ -163,9 +171,6 @@ const Particles = (function () {
         window.addEventListener('pointermove', function (e) {
           tx = (e.clientX / W) * 2 - 1;
           ty = (e.clientY / H) * 2 - 1;
-        }, { passive: true });
-        window.addEventListener('scroll', function () {
-          scrollOff = window.scrollY || 0;
         }, { passive: true });
         document.addEventListener('visibilitychange', function () {
           document.hidden ? stop() : start();
@@ -233,7 +238,7 @@ const Glyph = (function () {
   }
 
   function size() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = Math.min(window.devicePixelRatio || 1, window.innerWidth < 700 ? 1.5 : 2);
     /* the overlay is display:grid over the viewport — measure the stage,
        with the window as the floor in case it is still hidden */
     W = Math.max(cv.clientWidth, cv.parentElement ? cv.parentElement.clientWidth : 0, window.innerWidth);
