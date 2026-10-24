@@ -227,8 +227,10 @@ const Glyph = (function () {
 
   function size() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = cv.clientWidth || window.innerWidth;
-    H = cv.clientHeight || window.innerHeight;
+    /* the overlay is display:grid over the viewport — measure the stage,
+       with the window as the floor in case it is still hidden */
+    W = Math.max(cv.clientWidth, cv.parentElement ? cv.parentElement.clientWidth : 0, window.innerWidth);
+    H = Math.max(cv.clientHeight, cv.parentElement ? cv.parentElement.clientHeight : 0, window.innerHeight);
     cv.width = Math.round(W * dpr);
     cv.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -236,8 +238,8 @@ const Glyph = (function () {
 
   function build() {
     const cx = W / 2, cy = H / 2;
-    const R = Math.min(W, H) * 0.35;
-    const n = reduced ? 170 : (W < 520 ? 340 : 500);
+    const R = Math.min(W, H) * 0.385;
+    const n = reduced ? 170 : (W < 520 ? 360 : 560);
     pts = [];
     for (let i = 0; i < n; i++) {
       const tgt = shapePoint(R);
@@ -247,9 +249,9 @@ const Glyph = (function () {
         x: cx + Math.cos(sa) * sr,
         y: cy + Math.sin(sa) * sr,
         tx: cx + tgt.x, ty: cy + tgt.y,
-        ease: 0.028 + Math.random() * 0.045,
-        r: 0.8 + Math.random() * 1.8,
-        a: 0.45 + Math.random() * 0.55,
+        ease: 0.038 + Math.random() * 0.05,
+        r: 0.9 + Math.random() * 2.1,
+        a: 0.5 + Math.random() * 0.5,
         ph: Math.random() * Math.PI * 2,
         isRose: Math.random() < 0.65
       });
@@ -260,9 +262,18 @@ const Glyph = (function () {
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
     ctx.fillStyle = p.isRose
-      ? 'rgba(247,194,209,' + alpha + ')'
-      : 'rgba(235,208,162,' + alpha + ')';
+      ? 'rgba(248,212,223,' + alpha + ')'
+      : 'rgba(237,213,172,' + alpha + ')';
     ctx.fill();
+    /* a halo on the brightest grains so the heart reads as light, not dots */
+    if (alpha > .62) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * 3.4, 0, Math.PI * 2);
+      ctx.fillStyle = p.isRose
+        ? 'rgba(231,160,182,' + (alpha * .13) + ')'
+        : 'rgba(230,203,160,' + (alpha * .13) + ')';
+      ctx.fill();
+    }
   }
 
   function frame(t) {

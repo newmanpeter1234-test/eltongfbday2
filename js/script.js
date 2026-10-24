@@ -1,148 +1,112 @@
 /* ============================================================================
-   script.js — Master Orchestrator for Anziya's Birthday Story
-   Lenis smooth scrolling, GSAP ScrollTrigger, Audio sync, Video viewporting,
-   Interactive Wax Seal Letter & Birthday Candle
+   script.js — Director of the experience.
+   Lenis smooth scroll · GSAP ScrollTrigger · kinetic type · pinned gallery
+   Interactive wax seal · candle · finale · custom cursor & HUD
    ========================================================================== */
 
 (function () {
   'use strict';
 
-  const cfg = window.birthdayConfig || birthdayConfig;
+  const cfg = window.birthdayConfig || {};
   const root = document.documentElement;
+  const body = document.body;
   const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const HAS_GSAP = !!(window.gsap && window.ScrollTrigger);
+  const STATIC = REDUCED || !HAS_GSAP;
 
   const $  = function (s, c) { return (c || document).querySelector(s); };
   const $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
   const D  = function (n) { return REDUCED ? 0.001 : n; };
   const noop = function () {};
 
-  /* GSAP offline fallback */
-  const HAS_GSAP = !!(window.gsap && window.ScrollTrigger);
-  if (REDUCED) root.classList.add('no-motion');
-  const STATIC = REDUCED || !HAS_GSAP;
+  if (STATIC) root.classList.add('no-motion');
+  if (HAS_GSAP) gsap.registerPlugin(ScrollTrigger);
 
-  if (HAS_GSAP) {
-    gsap.registerPlugin(ScrollTrigger);
-  } else {
-    root.classList.add('no-motion');
-    window.gsap = makeGsapStandIn();
+  /* minimal stand-in so a missing CDN can never break the page */
+  if (!HAS_GSAP) {
+    const dummy = {
+      to: function () { return dummy; }, from: function () { return dummy; },
+      fromTo: function () { return dummy; }, set: function () { return dummy; },
+      call: function (fn) { if (typeof fn === 'function') fn(); return dummy; },
+      add: function () { return dummy; }, kill: noop, play: noop, pause: noop,
+      timeScale: function () { return dummy; }, scrollTrigger: null
+    };
+    window.gsap = {
+      registerPlugin: noop, to: function () { return dummy; }, from: function () { return dummy; },
+      fromTo: function () { return dummy; }, set: function () { return dummy; },
+      timeline: function () { return dummy; }, ticker: { add: noop, lagSmoothing: noop },
+      utils: {}
+    };
     window.ScrollTrigger = {
-      create: function (v) { if (v && v.onEnter) v.onEnter({ progress: 1 }); return { kill: noop }; },
-      refresh: noop, getAll: function () { return []; }, update: noop
+      create: function () { return { kill: noop }; }, refresh: noop, update: noop, getAll: function () { return []; }
     };
   }
 
-  function makeGsapStandIn() {
-    const SKIP = { duration:1, delay:1, ease:1, stagger:1, scrollTrigger:1, onComplete:1,
-                   onStart:1, onUpdate:1, immediateRender:1, overwrite:1, repeat:1,
-                   yoyo:1, defaults:1, paused:1, force3D:1, repeatDelay:1 };
-    const T = { x:'px', y:'px', z:'px' };
-
-    function list(t) {
-      if (!t) return [];
-      if (typeof t === 'string') return $$(t);
-      if (t.nodeType) return [t];
-      if (t.length != null) return Array.prototype.slice.call(t);
-      return [t];
-    }
-    function apply(targets, vars) {
-      list(targets).forEach(function (el) {
-        if (!el || !el.style) {
-          Object.keys(vars).forEach(function (k) { if (!SKIP[k]) { try { el[k] = vars[k]; } catch (e) {} } });
-          return;
-        }
-        const tr = [];
-        Object.keys(vars).forEach(function (k) {
-          if (SKIP[k]) return;
-          const v = vars[k];
-          if (k === 'x' || k === 'y' || k === 'z') tr.push('translate' + k.toUpperCase() + '(' + v + (T[k] && typeof v === 'number' ? 'px' : '') + ')');
-          else if (k === 'xPercent') tr.push('translateX(' + v + '%)');
-          else if (k === 'yPercent') tr.push('translateY(' + v + '%)');
-          else if (k === 'scale' || k === 'scaleX' || k === 'scaleY') tr.push(k + '(' + v + ')');
-          else if (k === 'rotation' || k === 'rotate') tr.push('rotate(' + v + 'deg)');
-          else if (k === 'autoAlpha') { el.style.opacity = v; el.style.visibility = v > 0 ? 'visible' : 'hidden'; }
-          else el.style[k] = v;
-        });
-        if (tr.length) el.style.transform = tr.join(' ');
-      });
-    }
-    const scrubbed = function (v) { return v && v.scrollTrigger && v.scrollTrigger.scrub; };
-
-    const api = {
-      registerPlugin: noop,
-      set: apply,
-      to: function (t, v) { if (!scrubbed(v)) { apply(t, v); if (v && v.onComplete) v.onComplete(); } return api; },
-      from: function (t, v) { if (v && v.onComplete) v.onComplete(); return api; },
-      fromTo: function (t, f, v) { if (!scrubbed(v)) { apply(t, v); if (v && v.onComplete) v.onComplete(); } return api; },
-      timeline: function (vars) {
-        const dead = scrubbed(vars);
-        const tl = {
-          to: function (t, v) { if (!dead) api.to(t, v); return tl; },
-          from: function (t, v) { if (!dead) api.from(t, v); return tl; },
-          fromTo: function (t, f, v) { if (!dead) api.fromTo(t, f, v); return tl; },
-          set: function (t, v) { if (!dead) apply(t, v); return tl; },
-          call: function (fn) { if (!dead && fn) fn(); return tl; },
-          add: function () { return tl; },
-          kill: noop, play: function () { return tl; }, pause: function () { return tl; }
-        };
-        if (!dead && vars && vars.scrollTrigger && vars.scrollTrigger.onEnter) {
-          vars.scrollTrigger.onEnter({ progress: 1 });
-        }
-        if (!dead && vars && vars.onComplete) setTimeout(vars.onComplete, 0);
-        return tl;
-      }
-    };
-    return api;
-  }
-
-  /* ══ DOM Elements ════════════════════════════════════════════════════════ */
+  /* ── DOM ──────────────────────────────────────────────────────────────── */
+  const loader      = $('#loader');
   const intro       = $('#intro');
   const journey     = $('#journey');
   const finale      = $('#finale');
   const flash       = $('#flash');
+  const hud         = $('#hud');
+  const rail        = $('#rail');
+  const hudNum      = $('#hudNum');
+  const hudLabel    = $('#hudLabel');
+  const hudBar      = $('#hudBar');
   const memProgress = $('#memProgress');
   const announcer   = $('#announce');
-  const audio       = $('#bgm');
   const musicBtn    = $('#musicToggle');
+  const audio       = $('#bgm');
 
   let state = 'intro';
+  let lenis = null;
   let finaleTL = null;
   let scrollBuilt = false;
+  let railBuilt = false;
+  let candleBlown = false;
+  let currentChapter = -1;
+
+  /* chapters — order matters for the rail + HUD */
+  const CHAPTERS = [
+    { id: 'reveal',        num: '01', label: 'Prologue' },
+    { id: 'memories',      num: '02', label: 'Memories' },
+    { id: 'videosIntro',   num: '03', label: 'Film' },
+    { id: 'timeline',      num: '04', label: 'Our Story' },
+    { id: 'letterSection', num: '05', label: 'The Letter' },
+    { id: 'pause',         num: '06', label: 'The Wish' },
+    { id: 'finale',        num: '07', label: 'Finale' }
+  ];
 
   function announce(msg) { if (announcer) announcer.textContent = msg; }
 
-  /* ══ Smooth Scrolling with Lenis ═════════════════════════════════════════ */
-  let lenis = null;
-  const IS_SAFARI = /^((?!chrome|chromium|crios|android|fxios|edg).)*safari/i.test(navigator.userAgent);
-
-  function initSmoothScroll() {
-    if (REDUCED || IS_SAFARI || typeof Lenis === 'undefined' || !HAS_GSAP) return;
-    try {
-      lenis = new Lenis({
-        duration: 1.1,
-        smoothWheel: true,
-        touchMultiplier: 1.6
-      });
-    } catch (e) { lenis = null; return; }
-
-    lenis.on('scroll', ScrollTrigger.update);
-    gsap.ticker.add(function (time) { lenis.raf(time * 1000); });
-    gsap.ticker.lagSmoothing(0);
-    lenis.stop();
+  /* the tab title breathes while the site is in the background */
+  const PAGE_TITLE = document.title;
+  let titleTimer = null;
+  function startTitleLoop() {
+    if (titleTimer) return;
+    const frames = ['For Anziya ♡', 'Happy Birthday, Anziya ♡', PAGE_TITLE];
+    let i = 0;
+    titleTimer = setInterval(function () {
+      document.title = frames[i % frames.length];
+      i++;
+    }, 3200);
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) startTitleLoop();
+    else { clearInterval(titleTimer); titleTimer = null; document.title = PAGE_TITLE; }
+  });
+  function burst(x, y, n) {
+    if (typeof Particles !== 'undefined' && Particles.burstAt) Particles.burstAt(x, y, n);
+  }
+  function intensity(v) {
+    if (typeof Particles !== 'undefined' && Particles.setIntensity) Particles.setIntensity(v);
   }
 
-  function scrollTop() {
-    if (lenis) lenis.scrollTo(0, { immediate: true });
-    window.scrollTo(0, 0);
-  }
-
-  function lockScroll() {
-    root.classList.add('is-locked'); document.body.classList.add('is-locked');
-    if (lenis) lenis.stop();
-  }
-  function unlockScroll() {
-    root.classList.remove('is-locked'); document.body.classList.remove('is-locked');
-    if (lenis) lenis.start();
+  function setInert(node, on) {
+    if (!node) return;
+    try { node.inert = on; } catch (e) {}
+    if (on) node.setAttribute('aria-hidden', 'true');
+    else node.removeAttribute('aria-hidden');
   }
 
   function press(node, fn) {
@@ -155,43 +119,223 @@
     });
   }
 
-  function setInert(node, on) {
-    if (!node) return;
-    try { node.inert = on; } catch (e) {}
-    if (on) node.setAttribute('aria-hidden', 'true');
-    else node.removeAttribute('aria-hidden');
+  let refreshTimer;
+  function refreshSoon(delay) {
+    if (!HAS_GSAP) return;
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(function () { ScrollTrigger.refresh(); }, delay || 150);
   }
 
-  /* ══ Gift Box Opening Animation ══════════════════════════════════════════ */
-  function openGiftBox(giftEl, onPeak, onDone) {
-    if (!giftEl) { onPeak && onPeak(); onDone && onDone(); return null; }
+  /* ══ SMOOTH SCROLL ═══════════════════════════════════════════════════════ */
+  function initSmoothScroll() {
+    if (STATIC || typeof Lenis === 'undefined') return;
+    try {
+      lenis = new Lenis({
+        lerp: 0.095,
+        smoothWheel: true,
+        wheelMultiplier: 1.05,
+        touchMultiplier: 1.6,
+        syncTouch: false
+      });
+    } catch (e) { lenis = null; return; }
 
+    lenis.on('scroll', function (e) {
+      if (HAS_GSAP) ScrollTrigger.update();
+      updateProgress(e && typeof e.scroll === 'number' ? e.scroll : window.scrollY);
+    });
+    gsap.ticker.add(function (t) { lenis.raf(t * 1000); });
+    gsap.ticker.lagSmoothing(0);
+    lenis.stop();
+  }
+
+  function lockScroll() {
+    root.classList.add('is-locked');
+    body.classList.add('is-locked');
+    if (lenis) lenis.stop();
+  }
+  function unlockScroll() {
+    root.classList.remove('is-locked');
+    body.classList.remove('is-locked');
+    if (lenis) lenis.start();
+  }
+  function toTop() {
+    if (lenis) lenis.scrollTo(0, { immediate: true });
+    window.scrollTo(0, 0);
+  }
+  function scrollToEl(target, offset) {
+    const node = typeof target === 'string' ? $(target) : target;
+    if (!node) return;
+    if (lenis) lenis.scrollTo(node, { offset: offset == null ? -8 : offset, duration: 1.25 });
+    else node.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' });
+  }
+
+  /* ══ HUD · RAIL · PROGRESS ═══════════════════════════════════════════════ */
+  let progressRaf = false;
+  function updateProgress(y) {
+    if (progressRaf || (hudBar && body.classList.contains('is-finale'))) return;
+    progressRaf = true;
+    requestAnimationFrame(function () {
+      progressRaf = false;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const p = max > 0 ? Math.min(1, Math.max(0, y / max)) : 0;
+      hudBar.style.transform = 'scaleX(' + p + ')';
+    });
+  }
+  window.addEventListener('scroll', function () { updateProgress(window.scrollY); }, { passive: true });
+
+  function buildRail() {
+    if (railBuilt || !rail) return;
+    railBuilt = true;
+    rail.innerHTML = '';
+    CHAPTERS.forEach(function (c, i) {
+      if (c.id === 'finale') return;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'rail__item';
+      b.setAttribute('aria-label', 'Chapter ' + c.num + ' — ' + c.label);
+      b.innerHTML = '<span class="rail__num">' + c.num + '</span><span class="rail__dot" aria-hidden="true"></span>';
+      b.addEventListener('click', function () { scrollToEl('#' + c.id); });
+      rail.append(b);
+    });
+    rail.removeAttribute('aria-hidden');
+    rail.setAttribute('aria-hidden', 'false');
+  }
+
+  function setChapter(index) {
+    if (index === currentChapter) return;
+    currentChapter = index;
+    const def = CHAPTERS[index];
+    if (!def) return;
+    if (hudNum) hudNum.textContent = def.num;
+    if (hudLabel) hudLabel.textContent = def.label;
+    $$('.rail__item').forEach(function (item, i) {
+      const on = i === index;
+      item.classList.toggle('is-active', on);
+      if (on) item.setAttribute('aria-current', 'true');
+      else item.removeAttribute('aria-current');
+    });
+  }
+
+  function trackChapters() {
+    if (!HAS_GSAP) return;
+    const visible = CHAPTERS.filter(function (c) { return c.id !== 'finale'; });
+    visible.forEach(function (c, i) {
+      const node = document.getElementById(c.id);
+      if (!node) return;
+      const next = visible[i + 1];
+      ScrollTrigger.create({
+        trigger: node,
+        start: 'top 55%',
+        endTrigger: next ? document.getElementById(next.id) : node,
+        end: next ? 'top 55%' : 'bottom 55%',
+        onToggle: function (self) { if (self.isActive) setChapter(i); }
+      });
+    });
+  }
+
+  /* ══ LOADER ══════════════════════════════════════════════════════════════ */
+  function initLoader() {
+    const numEl = $('#loadNum');
+    const barEl = $('#loadBar');
+    let finished = false;
+
+    function finish() {
+      if (finished) return;
+      finished = true;
+      if (numEl) numEl.textContent = '100';
+      if (barEl) barEl.style.transform = 'scaleX(1)';
+      if (loader) loader.classList.add('is-done');
+      root.classList.add('is-loaded');
+      revealIntro();
+      setTimeout(function () {
+        if (loader) { loader.hidden = true; loader.style.display = 'none'; }
+      }, 1500);
+    }
+
+    if (!loader) { revealIntro(); return; }
+
+    if (STATIC) {
+      if (numEl) numEl.textContent = '100';
+      if (barEl) barEl.style.transform = 'scaleX(1)';
+      setTimeout(finish, 260);
+      return;
+    }
+
+    const val = { p: 0 };
+    gsap.to(val, {
+      p: 100,
+      duration: 1.7,
+      ease: 'power2.inOut',
+      onUpdate: function () {
+        const v = Math.round(val.p);
+        if (numEl) numEl.textContent = v < 10 ? '0' + v : String(v);
+        if (barEl) barEl.style.transform = 'scaleX(' + (val.p / 100) + ')';
+      },
+      onComplete: function () {
+        const ready = function () { finish(); };
+        const guard = setTimeout(ready, 1600); /* never hold her hostage */
+        const fontGate = (document.fonts && document.fonts.ready)
+          ? document.fonts.ready
+          : Promise.resolve();
+        fontGate.then(function () {
+          clearTimeout(guard);
+          setTimeout(ready, 260);
+        });
+      }
+    });
+    setTimeout(finish, 4200);
+  }
+
+  let introShown = false;
+  function revealIntro() {
+    if (introShown) return;
+    introShown = true;
+    if (STATIC || !intro) return;
+    gsap.timeline({ defaults: { ease: 'power3.out' } })
+      .fromTo('.intro__whisper', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 1.1 }, .2)
+      .fromTo('.intro__side', { opacity: 0 }, { opacity: 1, duration: 1.4 }, .5)
+      .fromTo('.intro__stage', { opacity: 0, y: 26, scale: .97 },
+                          { opacity: 1, y: 0, scale: 1, duration: 1.5 }, .45)
+      .fromTo('.intro__ghost', { opacity: 0, letterSpacing: '.02em' },
+                           { opacity: .85, letterSpacing: '-.045em', duration: 2 }, .7)
+      .fromTo('.intro__hint', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 1.1 }, 1.4)
+      .fromTo('#skipIntro', { opacity: 0 }, { opacity: .9, duration: 1 }, 2);
+  }
+
+  /* ══ GIFT BOX OPENING ════════════════════════════════════════════════════ */
+  function openGiftBox(giftEl, onPeak, onDone) {
+    if (!giftEl || STATIC) {
+      if (onPeak) onPeak();
+      if (onDone) onDone();
+      return null;
+    }
     giftEl.classList.add('is-opening');
-    const r    = giftEl.getBoundingClientRect();
-    const cx   = r.left + r.width / 2;
-    const cy   = r.top + r.height * 0.42;
+    const r = giftEl.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height * 0.42;
 
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-    tl.to($('.gift__glow', giftEl), { opacity: 1, duration: D(0.6) })
-      .to($('.gift__lid', giftEl),  { y: -60, x: 6, rotation: -8, transformOrigin: '50% 50%',
-                                      duration: D(1.15), ease: 'power3.inOut' }, '-=0.35')
-      .to($('.gift__beam', giftEl), { opacity: 1, scaleY: 1, duration: D(0.9) }, '<')
-      .to($('.gift__aura', giftEl), { scale: 2.8, opacity: 1, duration: D(1.2) }, '<')
-      .call(function () { Particles.burstAt(cx, cy, window.innerWidth < 600 ? 95 : 150); })
-      .to($('.gift__svg', giftEl),  { opacity: 0.1, duration: D(0.9) }, '-=0.7')
-      .to(flash, { opacity: 1, duration: D(0.6) }, '-=0.45')
-      .call(function () { onPeak && onPeak(); })
-      .to(flash, { opacity: 0, duration: D(1.4) })
-      .call(function () { onDone && onDone(); });
+    tl.to($('.gift__glow', giftEl), { opacity: 1, duration: D(.55) })
+      .to($('.gift__lid', giftEl), {
+        y: -62, x: 6, rotation: -8, transformOrigin: '50% 50%',
+        duration: D(1.15), ease: 'power3.inOut'
+      }, '-=.3')
+      .to($('.gift__beam', giftEl), { opacity: 1, scaleY: 1, duration: D(.9) }, '<')
+      .to($('.gift__aura', giftEl), { scale: 2.9, opacity: 1, duration: D(1.2) }, '<')
+      .call(function () { burst(cx, cy, window.innerWidth < 600 ? 95 : 165); })
+      .to($('.gift__svg', giftEl), { opacity: .08, duration: D(.9) }, '-=.65')
+      .to(flash, { opacity: 1, duration: D(.55) }, '-=.45')
+      .call(function () { if (onPeak) onPeak(); })
+      .to(flash, { opacity: 0, duration: D(1.5) })
+      .call(function () { if (onDone) onDone(); });
     return tl;
   }
 
-  /* ══ Scene 1 → 2 ═════════════════════════════════════════════════════════ */
+  /* ══ SCENE 01 → THE JOURNEY ══════════════════════════════════════════════ */
   function openIntroGift() {
     if (state !== 'intro') return;
     state = 'opening';
     startMusic(true);
-
     const safety = setTimeout(enterJourney, 6000);
     openGiftBox($('#introGift .gift'), function () {
       clearTimeout(safety);
@@ -200,295 +344,419 @@
   }
 
   function enterJourney() {
-    if (state === 'journey' || state === 'finale') return;
+    if (state === 'journey' || state === 'finale' || state === 'opening-final') return;
     state = 'journey';
 
     intro.classList.remove('is-active');
     setInert(intro, true);
     setInert(journey, false);
     unlockScroll();
-    scrollTop();
+    toTop();
     journey.classList.remove('is-veiled');
-    if (!musicBroken) musicBtn.classList.remove('is-pre');
-    announce('Happy Birthday, ' + cfg.name + '. Scroll to begin our journey.');
+    body.classList.add('is-live');
+    if (hud) hud.removeAttribute('aria-hidden');
+    if (musicBtn && !musicBroken) musicBtn.classList.remove('is-pre');
 
-    ScrollTrigger.refresh();
-    playReveal();
+    buildRail();
+    setChapter(0);
+    announce('Happy Birthday, ' + cfg.name + '. Scroll slowly — the story is yours.');
+
+    requestAnimationFrame(function () {
+      if (!STATIC) {
+        buildScrollAnimations();
+        playHero();
+      }
+      refreshSoon(80);
+    });
   }
 
-  function playReveal() {
-    const r = $('#reveal');
-    gsap.timeline({ defaults: { ease: 'power3.out' } })
-      .fromTo($('.reveal__greeting .mask__i', r), { yPercent: 115, opacity: 0 }, { yPercent: 0, opacity: 1, duration: D(1.1) }, 0.25)
-      .fromTo($('.reveal__name .mask__i', r),     { yPercent: 118, opacity: 0 }, { yPercent: 0, opacity: 1, duration: D(1.5) }, 0.55)
-      .fromTo($('.reveal__date .mask__i', r),     { yPercent: 110, opacity: 0 }, { yPercent: 0, opacity: 1, duration: D(1.1) }, 1.1)
-      .fromTo($('.rule', r),                      { scaleX: 0, opacity: 0 },     { scaleX: 1, opacity: 1, duration: D(1.2) }, 1.45)
-      .fromTo($$('.reveal__lines p', r),          { y: 26, opacity: 0 },         { y: 0, opacity: 1, duration: D(1.1), stagger: 0.45 }, 1.8)
-      .fromTo($('.scroll-cue', r),                { y: 16, opacity: 0 },         { y: 0, opacity: 1, duration: D(1.1) }, 3.2);
+  function prepHero() {
+    if (STATIC) return;
+    gsap.set('.hero__name .char', { yPercent: 126, opacity: 0 });
+    gsap.set('.hero__eyebrow .w__i', { yPercent: 120, opacity: 0 });
+    gsap.set('.hero__date, .hero__line, .hero__meta, .hero__side--r, .scroll-cue', { opacity: 0 });
+    gsap.set('.hero__dash', { scaleX: 0 });
+    gsap.set('.hero__ghost', { opacity: 0 });
   }
 
-  /* ══ Scroll-Driven Animations ════════════════════════════════════════════ */
+  function playHero() {
+    if (STATIC) return;
+    const chars = $$('.hero__name .char');
+    const words = $$('.hero__eyebrow .w__i');
+
+    const tl = gsap.timeline({ defaults: { ease: 'power4.out' } });
+    tl.fromTo(words, { yPercent: 120, opacity: 0 },
+                      { yPercent: 0, opacity: 1, duration: 1.1, stagger: .055 }, 0)
+      .fromTo(chars, { yPercent: 126, opacity: 0 },
+                      { yPercent: 0, opacity: 1, duration: 1.5, stagger: .065 }, .25)
+      .fromTo('.hero__date', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 1 }, .95)
+      .fromTo('.hero__dash', { scaleX: 0 }, { scaleX: 1, duration: 1.1 }, 1.05)
+      .fromTo('.hero__line', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 1 }, 1.15)
+      .fromTo('.hero__meta, .hero__side, .scroll-cue', { opacity: 0, y: 10 },
+                      { opacity: 1, y: 0, duration: .9, stagger: .07 }, .95)
+      .fromTo('.hero__ghost', { opacity: 0, scale: .94 }, { opacity: 1, scale: 1, duration: 2.2 }, .2);
+
+    gsap.to('.hero__center', {
+      yPercent: -13, opacity: .3, ease: 'none',
+      scrollTrigger: { trigger: '#reveal', start: 'top top', end: 'bottom top', scrub: .6 }
+    });
+    gsap.to('.hero__ghost', {
+      yPercent: -16, ease: 'none',
+      scrollTrigger: { trigger: '#reveal', start: 'top top', end: 'bottom top', scrub: .6 }
+    });
+  }
+
+  /* ══ SCROLL ANIMATIONS ═══════════════════════════════════════════════════ */
   function buildScrollAnimations() {
-    if (scrollBuilt) return;
+    if (scrollBuilt || STATIC) return;
     scrollBuilt = true;
-
-    chapters();
-    memories();
-    videoCards();
-    timeline();
-    loveLetter();
-    quietPauseAndCandle();
-
-    ScrollTrigger.refresh();
+    chaptersReveal();
+    buildGallery();
+    videosReveal();
+    timelineReveal();
+    letterReveal();
+    pauseScene();
+    trackChapters();
+    refreshSoon(120);
   }
 
-  function chapters() {
+  function chaptersReveal() {
     $$('.chapter').forEach(function (ch) {
-      const bits = $$('.rv', ch).filter(function (n) { return !n.classList.contains('chapter__rule'); });
-      gsap.fromTo(bits, { y: 34, opacity: 0 }, {
-        y: 0, opacity: 1, duration: D(1.3), stagger: 0.18, ease: 'power3.out',
-        scrollTrigger: { trigger: ch, start: 'top 74%', once: true }
-      });
-      const rule = $('.chapter__rule', ch);
-      if (rule) {
-        gsap.fromTo(rule, { scaleX: 0, opacity: 0 }, {
-          scaleX: 1, opacity: 1, duration: D(1.6), ease: 'power3.out', delay: 0.3,
-          scrollTrigger: { trigger: ch, start: 'top 74%', once: true }
-        });
-      }
-    });
-  }
-
-  function memories() {
-    const cards = $$('.memory');
-    const total = cards.length;
-    const num   = $('.mem-progress__num', memProgress);
-    const bar   = $('.mem-progress__bar i', memProgress);
-
-    cards.forEach(function (m, i) {
-      const label = $('.memory__label', m);
-      const frame = $('.memory__frame', m);
-      const imgs  = $$('img', frame);
-      const text  = $('.memory__text', m);
-      const stage = $('.memory__stage', m);
-      const style = m.dataset.reveal;
-
-      let from, to;
-      if (style === 'curtain') {
-        from = { clipPath: 'inset(0% 0% 100% 0%)', scale: 1.05 };
-        to   = { clipPath: 'inset(0% 0% 0% 0%)', scale: 1, duration: D(1.5) };
-      } else if (style === 'bloom') {
-        from = { opacity: 0, scale: 1.10 };
-        to   = { opacity: 1, scale: 1, duration: D(1.7) };
-      } else {
-        from = { clipPath: 'inset(0% 100% 0% 0%)', x: -26 };
-        to   = { clipPath: 'inset(0% 0% 0% 0%)', x: 0, duration: D(1.5) };
-      }
-      to.ease = 'power3.out';
+      const label = $('.chapter__label', ch);
+      const words = $$('.chapter__title .w__i', ch);
+      const aside = $('.chapter__aside', ch);
+      const ghost = $('.chapter__ghost', ch);
 
       const tl = gsap.timeline({
         defaults: { ease: 'power3.out' },
-        scrollTrigger: {
-          trigger: m, start: 'top 68%', once: true,
-          onEnter: function () { loadMediaIn(m); }
-        }
+        scrollTrigger: { trigger: ch, start: 'top 80%', once: true }
       });
-      if (label) tl.fromTo(label, { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: D(0.9) });
-      tl.fromTo(frame, { opacity: 0 }, { opacity: 1, duration: D(1.4) }, label ? '-=0.65' : 0)
-        .fromTo(imgs, from, to, '<')
-        .fromTo(text,  { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: D(1.1) }, '-=0.85');
+      if (label) tl.fromTo(label, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .9 }, 0);
+      if (words.length) {
+        tl.fromTo(words, { yPercent: 116, opacity: 0 },
+                         { yPercent: 0, opacity: 1, duration: 1.15, stagger: .045 }, .08);
+      }
+      if (aside) tl.fromTo(aside, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 1 }, .45);
 
-      if (!REDUCED) {
-        gsap.fromTo(frame, { y: 26 }, {
-          y: -26, ease: 'none',
-          scrollTrigger: { trigger: m, start: 'top bottom', end: 'bottom top', scrub: 0.7 }
-        });
-        gsap.to(stage, {
-          opacity: 0, y: -34, scale: 0.975, ease: 'none',
-          scrollTrigger: { trigger: m, start: 'bottom 58%', end: 'bottom 4%', scrub: 0.5 }
+      if (ghost) {
+        gsap.fromTo(ghost, { yPercent: 20 }, {
+          yPercent: -10, ease: 'none',
+          scrollTrigger: { trigger: ch, start: 'top bottom', end: 'bottom top', scrub: .7 }
         });
       }
-
-      ScrollTrigger.create({
-        trigger: m, start: 'top 60%', end: 'bottom 40%',
-        onEnter:     function () { setProgress(i); },
-        onEnterBack: function () { setProgress(i); }
-      });
     });
-
-    function setProgress(i) {
-      if (num) num.textContent = pad(i + 1) + ' / ' + pad(total);
-      if (bar) bar.style.transform = 'scaleX(' + ((i + 1) / total) + ')';
-    }
-    function pad(n) { return (n < 10 ? '0' : '') + n; }
-
-    if (cards.length) {
-      setProgress(0);
-      const sync = function (self) { memProgress.classList.toggle('is-visible', !!self.isActive); };
-      ScrollTrigger.create({
-        trigger: '#memories', start: 'top 55%', end: 'bottom 60%',
-        onToggle: sync, onRefresh: sync
-      });
-    }
   }
 
-  function videoCards() {
-    const cards = $$('.vcard');
-    cards.forEach(function (card) {
+  /* ── the pinned horizontal gallery ────────────────────────────────────── */
+  function setMemory(index) {
+    if (!memProgress) return;
+    const total = (cfg.photos && cfg.photos.length) || 10;
+    const i = Math.max(1, Math.min(total, index));
+    const numEl = $('.mem-progress__num i', memProgress);
+    const totEl = $('.mem-progress__num span', memProgress);
+    const bar = $('.mem-progress__bar i', memProgress);
+    if (numEl) numEl.textContent = (i < 10 ? '0' : '') + i;
+    if (totEl) totEl.textContent = (total < 10 ? '0' : '') + total;
+    if (bar) bar.style.transform = 'scaleX(' + (i / total) + ')';
+  }
+
+  function buildGallery() {
+    const section = $('#memories');
+    const track = $('#galleryTrack');
+    if (!section || !track) return;
+
+    const panels = $$('.panel', track);
+    const photos = panels.filter(function (p) { return !p.classList.contains('panel--end'); });
+    const bar = $('.gallery__line i', section);
+    setMemory(1);
+
+    const mm = gsap.matchMedia();
+
+    mm.add('(min-width: 900px)', function () {
+      const distance = function () {
+        return Math.max(0, track.scrollWidth - window.innerWidth);
+      };
+      if (distance() < 40) return;
+
+      /* hold the photographs back until the section is actually in place */
+      gsap.fromTo(panels, { y: 60, opacity: 0 }, {
+        y: 0, opacity: 1, duration: 1.2, stagger: .06, ease: 'power3.out',
+        scrollTrigger: { trigger: section, start: 'top 92%', once: true }
+      });
+
+      const tween = gsap.to(track, {
+        x: function () { return -distance(); },
+        ease: 'none',
+        scrollTrigger: {
+          trigger: section,
+          start: 'top top',
+          end: function () { return '+=' + distance(); },
+          pin: true,
+          scrub: .8,
+          anticipatePin: 1,
+          invalidateOnRefresh: true,
+          onUpdate: function (self) {
+            if (bar) bar.style.transform = 'scaleX(' + self.progress + ')';
+          },
+          onToggle: function (self) {
+            if (memProgress) memProgress.classList.toggle('is-visible', self.isActive);
+          },
+          onRefresh: function (self) {
+            if (memProgress) memProgress.classList.toggle('is-visible', self.isActive);
+          }
+        }
+      });
+
+      panels.forEach(function (panel) {
+        const zoom = $('.panel__zoom', panel);
+        if (!zoom) return;
+        gsap.fromTo(zoom, { xPercent: -5 }, {
+          xPercent: 5, ease: 'none',
+          scrollTrigger: {
+            trigger: panel, containerAnimation: tween,
+            start: 'left right', end: 'right left', scrub: true
+          }
+        });
+      });
+
+      photos.forEach(function (panel, i) {
+        ScrollTrigger.create({
+          trigger: panel, containerAnimation: tween,
+          start: 'left center', end: 'right center',
+          onToggle: function (self) { if (self.isActive) setMemory(i + 1); }
+        });
+      });
+
+      return function () {
+        gsap.set(track, { clearProps: 'transform' });
+        if (memProgress) memProgress.classList.remove('is-visible');
+      };
+    });
+
+    mm.add('(max-width: 899px)', function () {
+      photos.forEach(function (panel) {
+        gsap.fromTo(panel, { opacity: 0, y: 46 }, {
+          opacity: 1, y: 0, duration: 1.15, ease: 'power3.out',
+          scrollTrigger: { trigger: panel, start: 'top 86%', once: true }
+        });
+      });
+      const end = $('.panel--end', track);
+      if (end) {
+        gsap.fromTo(end, { opacity: 0, y: 40 }, {
+          opacity: 1, y: 0, duration: 1.1, ease: 'power3.out',
+          scrollTrigger: { trigger: end, start: 'top 86%', once: true }
+        });
+      }
+    });
+
+    /* images change the track width — remeasure when they land */
+    $$('img', track).forEach(function (img) {
+      if (img.complete) return;
+      img.addEventListener('load', function () { refreshSoon(120); }, { once: true });
+    });
+  }
+
+  function videosReveal() {
+    $$('.vcard').forEach(function (card) {
       const frame = $('.vcard__frame', card);
-      const cap   = $('.vcard__caption', card);
-
-      const tl = gsap.timeline({
-        defaults: { ease: 'power3.out' },
-        scrollTrigger: {
-          trigger: card, start: 'top 82%', once: true,
-          onEnter: function () { loadMediaIn(card); }
-        }
-      });
-      tl.fromTo(frame,
-        { clipPath: 'inset(0% 0% 100% 0%)', scale: 1.06, opacity: 1 },
-        { clipPath: 'inset(0% 0% 0% 0%)', scale: 1, duration: D(1.5) });
-      if (cap) {
-        tl.fromTo(cap, { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: D(1) }, '-=0.8');
-      }
-      gsap.set(card, { opacity: 1 });
-
-      if (!REDUCED) {
-        gsap.fromTo(frame, { y: 18 }, {
-          y: -18, ease: 'none',
-          scrollTrigger: { trigger: card, start: 'top bottom', end: 'bottom top', scrub: 0.7 }
+      const meta = $('.vcard__meta', card);
+      gsap.fromTo(frame,
+        { clipPath: 'inset(0% 0% 100% 0%)', scale: 1.04, opacity: 1 },
+        {
+          clipPath: 'inset(0% 0% 0% 0%)', scale: 1, duration: 1.5, ease: 'power3.out',
+          scrollTrigger: { trigger: card, start: 'top 82%', once: true }
+        });
+      if (meta) {
+        gsap.fromTo(meta, { opacity: 0, y: 18 }, {
+          opacity: 1, y: 0, duration: 1, ease: 'power3.out',
+          scrollTrigger: { trigger: card, start: 'top 78%', once: true }
         });
       }
     });
   }
 
-  function timeline() {
-    const fill = $('.tl__fill');
+  function timelineReveal() {
+    const fill = $('.tl__rail i');
     if (fill) {
-      if (REDUCED) gsap.set(fill, { scaleY: 1 });
-      else gsap.fromTo(fill, { scaleY: 0 }, {
+      gsap.fromTo(fill, { scaleY: 0 }, {
         scaleY: 1, ease: 'none',
-        scrollTrigger: { trigger: '.tl__track', start: 'top 72%', end: 'bottom 78%', scrub: 0.6 }
+        scrollTrigger: { trigger: '.tl__track', start: 'top 72%', end: 'bottom 78%', scrub: .6 }
       });
     }
-
     $$('.tl__item').forEach(function (item) {
-      gsap.fromTo(item, { y: 40, opacity: 0 }, {
-        y: 0, opacity: 1, duration: D(1.2), ease: 'power3.out',
-        scrollTrigger: {
-          trigger: item, start: 'top 82%', once: true,
-          onEnter: function () { loadMediaIn(item); }
-        }
+      gsap.fromTo(item, { opacity: 0, y: 42 }, {
+        opacity: 1, y: 0, duration: 1.2, ease: 'power3.out',
+        scrollTrigger: { trigger: item, start: 'top 84%', once: true }
       });
+      const media = $('.tl__media', item);
+      if (media) {
+        gsap.fromTo(media, { y: 24 }, {
+          y: -24, ease: 'none',
+          scrollTrigger: { trigger: item, start: 'top bottom', end: 'bottom top', scrub: .7 }
+        });
+      }
       ScrollTrigger.create({
-        trigger: item, start: 'top 76%', once: true,
-        onEnter: function () { const d = $('.tl__dot', item); if (d) d.classList.add('is-lit'); }
+        trigger: item, start: 'top 62%', end: 'bottom 38%',
+        onToggle: function (self) { item.classList.toggle('is-active', self.isActive); }
       });
     });
   }
 
-  /* ══ Interactive Love Letter with Wax Seal ════════════════════════════════ */
+  function letterReveal() {
+    const wrap = $('#envelopeWrap');
+    if (wrap) {
+      gsap.fromTo(wrap, { opacity: 0, y: 46 }, {
+        opacity: 1, y: 0, duration: 1.4, ease: 'power3.out',
+        scrollTrigger: { trigger: '#letterSection', start: 'top 72%', once: true }
+      });
+    }
+  }
+
+  function pauseScene() {
+    const sec = $('#pause');
+    if (!sec) return;
+    const lines = $$('.pause__line', sec);
+    const lineHost = $('.pause__lines', sec);
+    const candleS = $('#candleStage');
+    const bg = $('.bg');
+    let candleShown = false;
+
+    /* Ten timeline units spread across the pinned section.
+       0.0–3.1  first line in, breath, out
+       3.3–5.3  second line in, breath, out
+       5.4–10   the candle takes the stage                                  */
+    const tl = gsap.timeline({
+      scrollTrigger: { trigger: sec, start: 'top top', end: 'bottom bottom', scrub: .6 }
+    });
+    if (lines[0]) {
+      tl.fromTo(lines[0], { autoAlpha: 0, y: 36 }, { autoAlpha: 1, y: 0, duration: .8, ease: 'power2.out' }, 0)
+        .to(lines[0], { autoAlpha: 0, y: -32, duration: .7, ease: 'power2.in' }, 2.4);
+    }
+    if (lines[1]) {
+      tl.fromTo(lines[1], { autoAlpha: 0, y: 36 }, { autoAlpha: 1, y: 0, duration: .8, ease: 'power2.out' }, 3.3)
+        .to(lines[1], { autoAlpha: 0, y: -32, duration: .7, ease: 'power2.in' }, 4.6);
+    }
+    tl.to({}, { duration: 4.7 }, 5.3);
+
+    function showCandle(on) {
+      if (!candleS || candleBlown) return;
+      if (on === candleShown) return;
+      candleShown = on;
+      candleS.classList.toggle('is-active', on);
+      if (lineHost) {
+        lineHost.classList.toggle('is-faded', on);
+        lineHost.style.display = on ? 'none' : '';
+      }
+    }
+
+    ScrollTrigger.create({
+      trigger: sec, start: 'top top', end: 'bottom bottom',
+      onUpdate: function (self) {
+        showCandle(self.progress > .62);
+        intensity(1 - self.progress * .55);
+        if (bg) bg.style.opacity = String(1 - self.progress * .45);
+      },
+      onLeaveBack: function () {
+        showCandle(false);
+        intensity(1);
+        if (bg) bg.style.opacity = '1';
+      }
+    });
+  }
+
+  /* ══ THE WAX SEAL ════════════════════════════════════════════════════════ */
   function loveLetter() {
+    const wrap = $('#envelopeWrap');
     const env = $('#envelope');
     const seal = $('#waxSeal');
-    if (!env) return;
-
-    gsap.fromTo(env, { y: 40, opacity: 0 }, {
-      y: 0, opacity: 1, duration: D(1.2), ease: 'power3.out',
-      scrollTrigger: { trigger: '#letterSection', start: 'top 75%', once: true }
-    });
+    const paper = $('#letterPaper');
+    const hint = $('#letterHint');
+    if (!wrap || !env) return;
 
     press(env, function () {
-      if (env.classList.contains('is-open')) return;
-      env.classList.add('is-open');
+      if (wrap.classList.contains('is-open')) return;
+      wrap.classList.add('is-open');
+      env.setAttribute('aria-expanded', 'true');
+      if (paper) paper.setAttribute('aria-hidden', 'false');
+      if (hint) hint.style.opacity = '0';
 
-      const r = (seal || env).getBoundingClientRect();
-      const cx = r.left + r.width / 2;
-      const cy = r.top + r.height / 2;
-      Particles.burstAt(cx, cy, 60);
+      if (seal) {
+        const r = seal.getBoundingClientRect();
+        burst(r.left + r.width / 2, r.top + r.height / 2, 70);
+      }
+      announce("Elton's letter is open. Almost three years ago, our story began…");
 
-      announce("Elton's letter unfolded: Almost three years ago, our story began...");
-      ScrollTrigger.refresh();
+      if (!STATIC) {
+        const bits = $$('.letter-paper__inner > *');
+        gsap.fromTo(bits, { opacity: 0, y: 24 }, {
+          opacity: 1, y: 0, duration: 1, stagger: .12, delay: .55, ease: 'power3.out'
+        });
+      }
+
+      setTimeout(function () {
+        refreshSoon(60);
+        if (!paper) return;
+        const rect = paper.getBoundingClientRect();
+        if (rect.top > window.innerHeight * .5) {
+          scrollToEl(paper, -100);
+        }
+      }, 900);
     });
   }
 
-  /* ══ Scene 6 · The Quiet Pause & Birthday Candle ══════════════════════════ */
-  let candleBlown = false;
-
-  function quietPauseAndCandle() {
-    const sec     = $('#pause');
-    const lines   = $$('.pause__line', sec);
+  /* ══ THE CANDLE ══════════════════════════════════════════════════════════ */
+  function candleScene() {
     const candleS = $('#candleStage');
-    const candle  = $('#birthdayCandle');
-    const cHint   = $('#candleHint');
-    const reveal  = $('.pause__reveal', sec);
-    const bg      = $('.bg');
-    if (!sec) return;
+    const candle = $('#birthdayCandle');
+    const hint = $('#candleHint');
+    const reveal = $('.pause__reveal');
+    if (!candle || !reveal) return;
 
-    function setGiftReady(on) {
-      reveal.classList.toggle('is-ready', on);
-    }
-
-    /* Candle click interaction: blow out flame, smoke puff, particles */
     press(candle, function () {
       if (candleBlown) return;
+      if (candleS && !candleS.classList.contains('is-active') && !STATIC) return;
       candleBlown = true;
       candle.classList.add('is-blown');
 
       const r = candle.getBoundingClientRect();
-      const cx = r.left + r.width / 2;
-      const cy = r.top + 10;
-      Particles.burstAt(cx, cy, 75);
+      burst(r.left + r.width / 2, r.top + 12, 80);
+      if (hint) hint.textContent = (cfg.candle && cfg.candle.blownMessage) || 'May all your wishes come true, my love.';
+      announce('Wish made. A final gift for ' + cfg.name + '.');
 
-      if (cHint) cHint.textContent = (cfg.candle && cfg.candle.blownMessage) || "May all your wishes come true, my love. ♥";
+      const showReveal = function () {
+        reveal.classList.add('is-ready');
+        if (STATIC) {
+          if (candleS) candleS.style.display = 'none';
+          reveal.style.opacity = '1';
+          reveal.style.transform = 'none';
+          return;
+        }
+        gsap.fromTo(reveal, { opacity: 0, y: 26 }, {
+          opacity: 1, y: 0, duration: 1.2, ease: 'power3.out'
+        });
+      };
 
       setTimeout(function () {
-        gsap.to(candleS, { opacity: 0, y: -20, duration: D(1.0), onComplete: function () {
-          candleS.classList.remove('is-active');
-          gsap.fromTo(reveal, { opacity: 0, y: 25 }, { opacity: 1, y: 0, duration: D(1.2), ease: 'power2.out', onComplete: function () {
-            setGiftReady(true);
-            announce('A final gift for Anziya.');
-          }});
-        }});
-      }, 1800);
-    });
-
-    if (!REDUCED) {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: sec, start: 'top 25%', end: 'bottom bottom', scrub: 0.8
+        if (candleS) {
+          if (STATIC) { candleS.style.display = 'none'; }
+          else {
+            gsap.to(candleS, {
+              opacity: 0, y: -22, duration: .9, ease: 'power2.in',
+              onComplete: function () { candleS.classList.remove('is-active'); }
+            });
+          }
         }
-      });
-      lines.forEach(function (ln) {
-        tl.fromTo(ln, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 1, ease: 'power2.out' })
-          .to({}, { duration: 1.4 })
-          .to(ln, { opacity: 0, y: -18, duration: 0.9, ease: 'power2.in' });
-      });
-
-      tl.call(function () {
-        candleS.classList.add('is-active');
-      });
-
-      ScrollTrigger.create({
-        trigger: sec, start: 'top bottom', end: 'bottom bottom',
-        onUpdate: function (self) {
-          Particles.setIntensity(1 - self.progress * 0.75);
-          if (bg) bg.style.opacity = String(1 - self.progress * 0.5);
-        },
-        onLeaveBack: function () { Particles.setIntensity(1); if (bg) bg.style.opacity = '1'; }
-      });
-    } else {
-      gsap.set(lines, { opacity: 1 });
-      candleS.classList.add('is-active');
-      setGiftReady(true);
-    }
+        const lineHost = $('.pause__lines');
+        if (lineHost) lineHost.style.display = 'none';
+        setTimeout(showReveal, STATIC ? 0 : 260);
+      }, 1700);
+    });
   }
 
-  /* ══ Scene 6 → 7 · The Final Reveal ══════════════════════════════════════ */
+  /* ══ THE FINALE ══════════════════════════════════════════════════════════ */
   function openFinalGift() {
     if (state !== 'journey') return;
     state = 'opening-final';
-
     const safety = setTimeout(startFinale, 6000);
     openGiftBox($('#finalGift .gift'), function () {
       clearTimeout(safety);
@@ -500,66 +768,91 @@
     if (state === 'finale') return;
     state = 'finale';
 
+    body.classList.add('is-finale');
     finale.classList.add('is-active');
     setInert(finale, false);
     setInert(journey, true);
     lockScroll();
-    Particles.setIntensity(0.25);
+    setChapter(6);
+    intensity(.25);
     announce('A final message for ' + cfg.name + '.');
 
     const light  = $('#finaleLight');
+    const eyebrow = $('.finale__eyebrow');
     const photo  = $('.finale__photo');
     const name   = $('#finaleName');
     const lines  = $$('.finale__line');
     const replay = $('#replay');
     const skip   = $('#skipFinale');
-    skip.hidden = false;
+    if (skip) skip.hidden = false;
+
+    if (STATIC) {
+      if (skip) skip.hidden = true;
+      if (replay) replay.classList.add('is-ready');
+      return;
+    }
 
     finaleTL = gsap.timeline({ defaults: { ease: 'power2.out' } });
 
+    /* Act 1 — darkness, then the light gathers into a beating heart */
     finaleTL
-      .to({}, { duration: D(0.9) })
-      .fromTo(light, { opacity: 0, scale: 0.15 }, { opacity: 1, scale: 1, duration: D(1.5) })
-      .call(function () { if (!STATIC) Glyph.start(); })
-      .to(light, { opacity: 0.32, duration: D(1.6) })
-      .to({}, { duration: D(2.2) })
-      .call(function () { if (!STATIC) Glyph.dissolve(); })
-      .to(light, { opacity: 0, duration: D(1.3) })
-      .fromTo(photo, { opacity: 0, scale: 1.07, clipPath: 'inset(0% 0% 100% 0%)' },
-                     { opacity: 1, scale: 1, clipPath: 'inset(0% 0% 0% 0%)', duration: D(1.8), ease: 'power3.out' }, '-=0.5')
-      .fromTo(name,  { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: D(1.3) }, '-=0.6');
+      .to({}, { duration: D(.7) })
+      .fromTo(light, { opacity: 0, scale: .18 }, { opacity: 1, scale: 1, duration: D(1.5) })
+      .call(function () { if (typeof Glyph !== 'undefined' && Glyph.start) Glyph.start(); })
+      .to(light, { opacity: .30, duration: D(1.4) }, '-=.4')
+      .to({}, { duration: D(6.2) })   /* let the heart form, beat, and hold */
+      /* Act 2 — the heart dissolves and she appears */
+      .call(function () { if (typeof Glyph !== 'undefined' && Glyph.dissolve) Glyph.dissolve(); })
+      .to(light, { opacity: 0, duration: D(1.1) }, '-=.2')
+      .to('.finale__ghost', { opacity: 0, duration: D(1.4) }, '<');
 
-    lines.forEach(function (ln, i) {
-      finaleTL.fromTo(ln, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: D(1.2) }, '+=' + D(0.45));
-      if (!STATIC && i < lines.length - 1) {
-        finaleTL.to(ln, { opacity: 0, y: -18, duration: D(1.0), ease: 'power2.in' }, '+=' + D(2.4));
+    if (eyebrow) finaleTL.fromTo(eyebrow, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: D(1) }, '-=.6');
+
+    finaleTL
+      .fromTo(photo, { opacity: 0, scale: 1.06, clipPath: 'inset(0% 0% 100% 0%)' },
+                     { opacity: 1, scale: 1, clipPath: 'inset(0% 0% 0% 0%)', duration: D(1.8), ease: 'power3.out' }, '-=.2')
+      .fromTo(name, { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: D(1.2) }, '-=.7');
+
+    lines.forEach(function (line, i) {
+      finaleTL.fromTo(line, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: D(1.15) }, '+=.4');
+      if (i < lines.length - 1) {
+        finaleTL.to(line, { opacity: 0, y: -16, duration: D(1), ease: 'power2.in' }, '+=2.3');
       }
     });
 
     finaleTL
-      .fromTo(replay, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: D(1.1) }, '+=' + D(0.9))
+      .fromTo(replay, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: D(1.1) }, '+=.8')
       .call(function () {
         replay.classList.add('is-ready');
-        skip.hidden = true;
-        Particles.setIntensity(0.55);
+        if (skip) skip.hidden = true;
+        intensity(.55);
       });
   }
 
-  /* ══ Romantic Music Controller ═══════════════════════════════════════════ */
-  let musicOn = false, musicBroken = false, hiddenPaused = false;
+  /* ══ MUSIC ═══════════════════════════════════════════════════════════════ */
+  let musicOn = false;
+  let musicBroken = false;
+  let hiddenPaused = false;
   let musicChannel = null;
-  try { musicChannel = new BroadcastChannel('anziya-bday-music'); } catch (e) {}
+  try { musicChannel = new BroadcastChannel('anziya-bday-music'); } catch (e) { musicChannel = null; }
 
   function reflectMusic(on) {
+    if (!musicBtn) return;
     musicBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
     musicBtn.setAttribute('aria-label', on ? 'Pause background music' : 'Play background music');
+    const txt = $('.music__text', musicBtn);
+    if (txt) txt.textContent = on ? 'Sound on' : 'Sound';
   }
 
   function initMusic() {
+    if (!musicBtn) return;
     if (!cfg.music || !cfg.music.file) { musicBtn.hidden = true; return; }
+    if (!audio) { musicBtn.hidden = true; return; }
+
     audio.volume = 0;
     musicBtn.hidden = false;
     musicBtn.classList.add('is-pre');
+    reflectMusic(false);
 
     audio.addEventListener('error', function () {
       musicBroken = true;
@@ -567,12 +860,17 @@
     });
 
     musicBtn.addEventListener('click', function () {
-      audio.paused ? startMusic(false) : stopMusic();
+      if (audio.paused) startMusic(false);
+      else stopMusic();
     });
 
     if (musicChannel) {
       musicChannel.onmessage = function (e) {
-        if (e.data === 'claim' && !audio.paused) { audio.pause(); musicOn = false; reflectMusic(false); }
+        if (e.data === 'claim' && !audio.paused) {
+          audio.pause();
+          musicOn = false;
+          reflectMusic(false);
+        }
       };
     }
 
@@ -591,29 +889,32 @@
   }
 
   function startMusic(silentFail) {
-    if (musicBroken) return;
+    if (musicBroken || !audio) return;
     if (!audio.src) audio.src = cfg.music.file;
     const p = audio.play();
     if (p && p.then) {
       p.then(function () {
         musicOn = true;
         reflectMusic(true);
-        gsap.to(audio, { volume: cfg.music.volume || 0.45, duration: D(2.5) });
+        if (musicBtn) musicBtn.classList.remove('is-pre');
+        if (STATIC) audio.volume = cfg.music.volume || .42;
+        else gsap.to(audio, { volume: cfg.music.volume || .42, duration: 2.6 });
         claimPlayback();
       }).catch(function () {
-        if (!silentFail) musicBtn.classList.add('is-blocked');
+        if (!silentFail && musicBtn) musicBtn.classList.add('is-blocked');
       });
     }
   }
 
   function stopMusic() {
+    if (!audio) return;
     audio.pause();
     musicOn = false;
     audio.volume = 0;
     reflectMusic(false);
   }
 
-  /* ══ Video Controller ════════════════════════════════════════════════════ */
+  /* ══ VIDEO ═══════════════════════════════════════════════════════════════ */
   function initVideos() {
     const cards = $$('.vcard');
     if (!cards.length) return;
@@ -622,15 +923,14 @@
       const vid    = $('.vcard__video', card);
       const toggle = $('.vcard__toggle', card);
       const bar    = $('.vcard__progress i', card);
-      const label  = toggle.getAttribute('aria-label').replace(/^(Play|Pause) video/, '');
+      if (!vid || !toggle) return;
+      const label  = (toggle.getAttribute('aria-label') || '').replace(/^(Play|Pause) video/, '');
 
       function prime() {
         if (vid.src) return;
         vid.preload = 'auto';
         vid.src = vid.dataset.src;
       }
-      card._prime = prime;
-
       function start() {
         prime();
         const p = vid.play();
@@ -640,6 +940,7 @@
           });
         }
       }
+      card._prime = prime;
       card._start = start;
 
       toggle.addEventListener('click', function () {
@@ -647,17 +948,20 @@
         else { card.dataset.held = '1'; vid.pause(); }
       });
 
-      vid.addEventListener('loadeddata', function () { card.classList.add('has-started'); });
-      vid.addEventListener('playing',    function () { card.classList.add('has-started'); });
+      vid.addEventListener('timeupdate', function () {
+        if (vid.currentTime > 0.05) card.classList.add('has-started');
+      });
+      vid.addEventListener('playing', function () {
+        setTimeout(function () { if (vid.currentTime > 0.05) card.classList.add('has-started'); }, 260);
+      });
       vid.addEventListener('play', function () {
         card.classList.add('is-playing');
         toggle.setAttribute('aria-label', 'Pause video' + label);
       });
-      function stopped() {
+      vid.addEventListener('pause', function () {
         card.classList.remove('is-playing');
         toggle.setAttribute('aria-label', 'Play video' + label);
-      }
-      vid.addEventListener('pause', stopped);
+      });
 
       if (bar) {
         vid.addEventListener('timeupdate', function () {
@@ -672,109 +976,178 @@
     const io = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
         const card = e.target;
-        const vid  = $('.vcard__video', card);
-        if (!vid) return;
+        const vid = $('.vcard__video', card);
+        if (!vid || !card._start) return;
         if (e.intersectionRatio === 0) delete card.dataset.held;
-        if (e.isIntersecting && e.intersectionRatio >= 0.45) {
+        if (e.isIntersecting && e.intersectionRatio >= .45) {
           if (vid.paused && !card.dataset.held) card._start();
         } else if (!vid.paused) {
           vid.pause();
         }
       });
-    }, { threshold: [0, 0.45, 0.8] });
-
+    }, { threshold: [0, .45, .8] });
     cards.forEach(function (c) { io.observe(c); });
 
     const primer = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
-        if (e.isIntersecting) { e.target._prime(); primer.unobserve(e.target); }
+        if (e.isIntersecting && e.target._prime) {
+          e.target._prime();
+          primer.unobserve(e.target);
+        }
       });
     }, { rootMargin: '120% 0px' });
     cards.forEach(function (c) { primer.observe(c); });
   }
 
-  /* ══ Media Lazy Loading ══════════════════════════════════════════════════ */
-  function loadMediaIn(root) {
-    $$('img[data-src]', root).forEach(function (img) {
-      img.src = img.dataset.src;
-      delete img.dataset.src;
+  /* ══ CUSTOM CURSOR ═══════════════════════════════════════════════════════ */
+  function initCursor() {
+    const wrap = $('#cursor');
+    if (!wrap || STATIC) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    root.classList.add('has-cursor');
+    wrap.style.opacity = '0';
+    const ring = $('.cursor__ring', wrap);
+    const dot = $('.cursor__dot', wrap);
+    const label = $('.cursor__label', wrap);
+    let mx = window.innerWidth / 2, my = window.innerHeight / 2;
+    let rx = mx, ry = my;
+    let seen = false;
+
+    window.addEventListener('pointermove', function (e) {
+      mx = e.clientX; my = e.clientY;
+      if (!seen) { seen = true; wrap.style.opacity = '1'; }
+      if (dot) dot.style.transform = 'translate3d(' + mx + 'px,' + my + 'px,0)';
+    }, { passive: true });
+
+    window.addEventListener('pointerleave', function () { wrap.style.opacity = '0'; });
+    window.addEventListener('pointerenter', function () { if (seen) wrap.style.opacity = '1'; });
+
+    window.addEventListener('pointerdown', function () { wrap.classList.add('is-down'); });
+    window.addEventListener('pointerup', function () { wrap.classList.remove('is-down'); });
+
+    const hoverSel = 'a, button, [role="button"], .gift-tap, .panel__media, .vcard__toggle, .rail__item, .envelope, .candle';
+    document.addEventListener('pointerover', function (e) {
+      const t = e.target.closest ? e.target.closest(hoverSel) : null;
+      if (!t) return;
+      if (label) label.textContent = t.getAttribute('data-cursor') || 'Click';
+      wrap.classList.add('is-hover');
+    });
+    document.addEventListener('pointerout', function (e) {
+      const t = e.target.closest ? e.target.closest(hoverSel) : null;
+      if (!t) return;
+      const to = e.relatedTarget;
+      if (to && t.contains(to)) return;
+      wrap.classList.remove('is-hover');
+    });
+
+    (function loop() {
+      rx += (mx - rx) * .16;
+      ry += (my - ry) * .16;
+      if (ring) ring.style.transform = 'translate3d(' + rx + 'px,' + ry + 'px,0)';
+      if (label) label.style.transform = 'translate3d(' + rx + 'px,' + ry + 'px,0) translate(-50%, 0)';
+      requestAnimationFrame(loop);
+    })();
+  }
+
+  /* ══ MAGNETIC BUTTONS ════════════════════════════════════════════════════ */
+  function initMagnets() {
+    if (STATIC) return;
+    $$('[data-magnetic]').forEach(function (el) {
+      el.addEventListener('pointermove', function (e) {
+        const r = el.getBoundingClientRect();
+        gsap.to(el, {
+          x: (e.clientX - r.left - r.width / 2) * .22,
+          y: (e.clientY - r.top - r.height / 2) * .22,
+          duration: .45, ease: 'power2.out'
+        });
+      });
+      el.addEventListener('pointerleave', function () {
+        gsap.to(el, { x: 0, y: 0, duration: .8, ease: 'elastic.out(1, .45)' });
+      });
     });
   }
 
-  function initLazyMedia() {
-    const targets = $$('img[data-src]');
-    function load(img) {
-      if (img.dataset.src) { img.src = img.dataset.src; delete img.dataset.src; }
-    }
-    if (!('IntersectionObserver' in window)) { targets.forEach(load); return; }
-    const io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        if (e.isIntersecting) { load(e.target); io.unobserve(e.target); }
+  /* ══ BINDINGS ════════════════════════════════════════════════════════════ */
+  function bind() {
+    press($('#openGift'), openIntroGift);
+    const skipIntro = $('#skipIntro');
+    if (skipIntro) {
+      skipIntro.addEventListener('click', function () {
+        if (state === 'intro' || state === 'opening') {
+          startMusic(true);
+          enterJourney();
+        }
       });
-    }, { rootMargin: '200% 0px' });
-    targets.forEach(function (t) { io.observe(t); });
+    }
+
+    press($('#openFinal'), openFinalGift);
+    const skipFinale = $('#skipFinale');
+    if (skipFinale) {
+      skipFinale.addEventListener('click', function () {
+        if (finaleTL && finaleTL.timeScale) finaleTL.timeScale(14);
+      });
+    }
+    const replay = $('#replay');
+    if (replay) replay.addEventListener('click', function () { location.reload(); });
+
+    const brand = $('#hudBrand');
+    if (brand) brand.addEventListener('click', function () {
+      if (state === 'journey') scrollToEl('#reveal');
+    });
+
+    loveLetter();
+    candleScene();
   }
 
-  /* ══ Boot Application ════════════════════════════════════════════════════ */
+  /* ══ BOOT ════════════════════════════════════════════════════════════════ */
   function boot() {
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
 
     Scenes.build(cfg);
-    Particles.init({ reduced: REDUCED, density: (cfg.settings && cfg.settings.particleDensity) || 1.1 });
-    Glyph.init({ reduced: REDUCED, shape: 'heart' });
+    if (typeof Particles !== 'undefined' && Particles.init) {
+      Particles.init({
+        reduced: REDUCED,
+        density: (cfg.settings && cfg.settings.particleDensity) || 1
+      });
+    }
+    if (typeof Glyph !== 'undefined' && Glyph.init) {
+      Glyph.init({ reduced: REDUCED, shape: 'heart' });
+    }
 
     setInert(journey, true);
     setInert(finale, true);
+    if (hud) hud.setAttribute('aria-hidden', 'true');
+
     initSmoothScroll();
-    buildScrollAnimations();
     lockScroll();
-    scrollTop();
+    toTop();
 
-    window.addEventListener('load', function () {
-      if (state === 'intro') scrollTop();
-    });
-
-    press($('#openGift'), openIntroGift);
-    $('#skipIntro').addEventListener('click', function () {
-      if (state === 'intro' || state === 'opening') { startMusic(true); enterJourney(); }
-    });
-    press($('#openFinal'), openFinalGift);
-    $('#skipFinale').addEventListener('click', function () {
-      if (finaleTL && finaleTL.timeScale) finaleTL.timeScale(14);
-    });
-    $('#replay').addEventListener('click', function () { location.reload(); });
-
+    prepHero();
     initMusic();
     initVideos();
-    initLazyMedia();
+    initCursor();
+    initMagnets();
+    bind();
+    initLoader();
 
-    let rt, lastH = document.body.scrollHeight;
-    document.addEventListener('load', function () {
-      clearTimeout(rt);
-      rt = setTimeout(function () {
-        const h = document.body.scrollHeight;
-        if (Math.abs(h - lastH) > 4) { lastH = h; ScrollTrigger.refresh(); }
-      }, 300);
-    }, true);
-    window.addEventListener('orientationchange', function () {
-      setTimeout(function () { ScrollTrigger.refresh(); }, 400);
+    window.addEventListener('load', function () {
+      if (state === 'intro') toTop();
+      refreshSoon(220);
     });
+
+    window.addEventListener('resize', function () { refreshSoon(260); });
+    window.addEventListener('orientationchange', function () { setTimeout(refreshSoon, 350); });
+
     if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(function () { ScrollTrigger.refresh(); });
+      document.fonts.ready.then(function () { refreshSoon(120); });
     }
 
-    if (!HAS_GSAP) {
-      intro.classList.add('is-active');
-    }
-
-    const reveal = function () { root.classList.add('is-booted'); };
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(reveal);
-    } else {
-      reveal();
-    }
-    setTimeout(reveal, 700);
+    /* new media changes layout — measure again */
+    document.addEventListener('load', function (e) {
+      if (e.target && e.target.tagName === 'IMG') refreshSoon(240);
+    }, true);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b0408">
+<meta name="theme-color" content="#070205">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="For Anziya">
@@ -16,133 +16,238 @@
 <title>For Anziya — Happy Birthday, My Love</title>
 
 <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&display=swap">
-
-<link rel="stylesheet" href="css/style.css?v=1">
-<link rel="stylesheet" href="css/scenes.css?v=1">
+<link rel="preload" as="font" type="font/woff2" href="assets/fonts/bodoni-moda-latin-normal.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="assets/fonts/cormorant-garamond-latin-italic.woff2" crossorigin>
+<link rel="stylesheet" href="css/fonts.css?v=1">
+<link rel="stylesheet" href="css/style.css?v=5">
+<link rel="stylesheet" href="css/scenes.css?v=7">
 </head>
 
 <body>
+<script>document.documentElement.classList.add('js');</script>
 
-<!-- Quiet holding boot screen -->
-<div id="boot" class="boot" aria-hidden="true"><span class="boot__dot"></span></div>
+<!-- ══ CINEMATIC BOOT / LOADER ══════════════════════════════════════════════ -->
+<div id="loader" class="loader" aria-hidden="true">
+  <div class="loader__inner">
+    <span class="loader__mono">E<i>♡</i>A</span>
+    <span class="loader__label">A birthday story for Anziya</span>
+    <div class="loader__count"><span id="loadNum">00</span><i>%</i></div>
+    <div class="loader__bar"><i id="loadBar"></i></div>
+  </div>
+  <div class="loader__veil loader__veil--l"></div>
+  <div class="loader__veil loader__veil--r"></div>
+</div>
 
-<!-- Ambient background: velvet gradients + particles -->
-<div class="bg" aria-hidden="true"></div>
+<!-- ══ AMBIENT LAYERS ═══════════════════════════════════════════════════════ -->
+<div class="bg" aria-hidden="true">
+  <span class="bg__orb bg__orb--1"></span>
+  <span class="bg__orb bg__orb--2"></span>
+  <span class="bg__orb bg__orb--3"></span>
+  <span class="bg__glowline"></span>
+</div>
 <canvas id="fx" class="fx" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
 <div class="vignette" aria-hidden="true"></div>
-
-<!-- Full-screen light bloom for gift opening -->
 <div id="flash" class="flash" aria-hidden="true"></div>
 
-<!-- Floating romantic music toggle -->
-<button id="musicToggle" class="music" type="button" hidden
-        aria-pressed="false" aria-label="Play background music">
-  <span class="music__eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-</button>
+<!-- ══ CUSTOM CURSOR (desktop) ══════════════════════════════════════════════ -->
+<div id="cursor" class="cursor" aria-hidden="true">
+  <span class="cursor__ring"></span>
+  <span class="cursor__dot"></span>
+  <span class="cursor__label"></span>
+</div>
 
-<!-- Screen-reader announcements -->
+<!-- ══ FIXED HUD ════════════════════════════════════════════════════════════ -->
+<header id="hud" class="hud" aria-hidden="true">
+  <button id="hudBrand" class="hud__brand" type="button" aria-label="Back to the beginning">
+    <span class="hud__mono">E<i>♡</i>A</span>
+    <span class="hud__for">For Anziya</span>
+  </button>
+
+  <p class="hud__now" aria-live="polite">
+    <span id="hudNum" class="hud__num">01</span>
+    <span class="hud__sep" aria-hidden="true">/</span>
+    <span id="hudLabel" class="hud__label">Prologue</span>
+  </p>
+
+  <div class="hud__tools">
+    <button id="musicToggle" class="music" type="button" hidden
+            aria-pressed="false" aria-label="Play background music">
+      <span class="music__eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span class="music__text">Sound</span>
+    </button>
+  </div>
+
+  <span class="hud__bar" aria-hidden="true"><i id="hudBar"></i></span>
+</header>
+
+<!-- ══ CHAPTER RAIL ═════════════════════════════════════════════════════════ -->
+<nav id="rail" class="rail" aria-label="Chapters" aria-hidden="true"></nav>
+
+<!-- ══ MEMORY COUNTER ═══════════════════════════════════════════════════════ -->
+<div id="memProgress" class="mem-progress" aria-hidden="true">
+  <span class="mem-progress__num"><i>01</i> / <span>10</span></span>
+  <span class="mem-progress__bar"><i></i></span>
+  <span class="mem-progress__label">Selected memories</span>
+</div>
+
 <p id="announce" class="sr-only" role="status" aria-live="polite"></p>
 
 
-<!-- ══ SCENE 1 · THE VELVET GIFT ══════════════════════════════════════════ -->
+<!-- ══ SCENE 01 · THE VELVET GIFT ═══════════════════════════════════════════ -->
 <section id="intro" class="overlay overlay--intro is-active">
-  <div class="overlay__inner">
-    <p id="introWhisper" class="whisper"></p>
-    <div id="openGift" class="gift-tap" role="button" tabindex="0">
-      <div id="introGift" class="gift-slot"></div>
+  <span class="intro__corner intro__corner--tl" aria-hidden="true"></span>
+  <span class="intro__corner intro__corner--tr" aria-hidden="true"></span>
+  <span class="intro__corner intro__corner--bl" aria-hidden="true"></span>
+  <span class="intro__corner intro__corner--br" aria-hidden="true"></span>
+
+  <p class="intro__side intro__side--l" aria-hidden="true">A birthday story</p>
+  <p class="intro__side intro__side--r" aria-hidden="true">E ♡ A · MMXXV</p>
+
+  <div class="intro__inner">
+    <p id="introWhisper" class="intro__whisper"></p>
+
+    <div class="intro__stage">
+      <span class="intro__ghost" aria-hidden="true">Anziya</span>
+      <span class="intro__orbit" aria-hidden="true"></span>
+      <span class="intro__stamp" aria-hidden="true">Nov<br>08<br>XI</span>
+      <div id="openGift" class="gift-tap" role="button" tabindex="0" aria-label="Open your gift">
+        <div id="introGift" class="gift-slot"></div>
+      </div>
     </div>
-    <p class="tap-hint" id="introHint">
+
+    <p class="tap-hint intro__hint" id="introHint">
       <span class="tap-hint__arrow" aria-hidden="true"></span>
       <span class="tap-hint__text"></span>
     </p>
   </div>
-  <button id="skipIntro" class="skip" type="button"></button>
+
+  <button id="skipIntro" class="skip" type="button">Skip</button>
 </section>
 
 
-<!-- ══ THE JOURNEY (Scroll-driven story) ═══════════════════════════════════ -->
+<!-- ══ THE JOURNEY ══════════════════════════════════════════════════════════ -->
 <main id="journey" class="journey is-veiled" aria-hidden="true">
 
-  <!-- SCENE 2 · birthday reveal -->
-  <section id="reveal" class="scene reveal">
-    <p class="reveal__greeting"><span class="mask"><span class="mask__i" data-rv></span></span></p>
-    <h1 class="reveal__name"><span class="mask"><span class="mask__i" data-rv></span></span></h1>
-    <p class="reveal__date"><span class="mask"><span class="mask__i" data-rv></span></span></p>
-    <div class="rule" data-rv></div>
-    <div class="reveal__lines"></div>
-    <div class="scroll-cue" data-rv>
-      <span class="scroll-cue__text"></span>
-      <span class="scroll-cue__line" aria-hidden="true"></span>
+  <!-- SCENE 02 · HERO REVEAL -->
+  <section id="reveal" class="hero" aria-label="Happy Birthday Anziya">
+    <span class="hero__ghost" aria-hidden="true">08</span>
+    <span class="hero__ruleline" aria-hidden="true"></span>
+
+    <div class="hero__top">
+      <p class="hero__meta hero__meta--l">
+        <span class="dot" aria-hidden="true"></span>
+        <span id="heroByline"></span>
+      </p>
+      <p class="hero__meta hero__meta--r" id="heroMetaRight"></p>
+    </div>
+
+    <div class="hero__center">
+      <p class="hero__eyebrow" id="heroEyebrow"></p>
+      <h1 class="hero__name" id="heroName"></h1>
+      <div class="hero__sub">
+        <span class="hero__date" id="heroDate"></span>
+        <span class="hero__dash" aria-hidden="true"></span>
+        <p class="hero__line" id="heroLine"></p>
+      </div>
+    </div>
+
+    <div class="hero__bottom">
+      <p class="hero__side" aria-hidden="true">Scroll slowly</p>
+      <div class="scroll-cue">
+        <span class="scroll-cue__text" id="heroScroll"></span>
+        <span class="scroll-cue__line" aria-hidden="true"></span>
+      </div>
+      <p class="hero__side hero__side--r" aria-hidden="true">Nov 08 · Happy Birthday</p>
     </div>
   </section>
 
-  <!-- SCENE 3 · photo memories -->
-  <section id="memoriesIntro" class="chapter chapter--center"></section>
-  <div id="memories" class="memories"></div>
+  <div class="marquee marquee--display" data-marquee aria-hidden="true"></div>
 
-  <!-- SCENE 4 · video memories -->
-  <section id="videosIntro" class="chapter chapter--side"></section>
+  <!-- SCENE 03 · PHOTO MEMORIES -->
+  <section id="memoriesIntro" class="chapter chapter--memories"></section>
+  <section id="memories" class="gallery" aria-label="Photo memories">
+    <div id="galleryTrack" class="gallery__track"></div>
+    <div class="gallery__ui">
+      <span class="gallery__hint">Scroll to travel sideways</span>
+      <span class="gallery__line" aria-hidden="true"><i></i></span>
+    </div>
+  </section>
+
+  <div class="marquee marquee--outline" data-marquee aria-hidden="true"></div>
+
+  <!-- SCENE 04 · VIDEO MEMORIES -->
+  <section id="videosIntro" class="chapter chapter--split"></section>
   <div id="videos" class="videos"></div>
 
-  <!-- SCENE 5 · three-year timeline -->
+  <!-- SCENE 05 · THE THREE-YEAR STORY -->
   <section id="timeline" class="timeline"></section>
 
-  <!-- SCENE 5.5 · the interactive love letter -->
+  <!-- SCENE 06 · THE LETTER -->
   <section id="letterSection" class="letter-section">
-    <div class="letter-wrap">
-      <div class="chapter chapter--center letter-header">
-        <p class="chapter__label rv">A Note For You</p>
-        <h2 class="chapter__title rv">From Elton’s Heart</h2>
-        <div class="chapter__rule rv"></div>
-      </div>
-      
-      <div id="envelope" class="envelope rv" role="button" tabindex="0" aria-label="Tap to open love letter">
-        <div class="envelope__back"></div>
-        <div class="envelope__paper" id="letterPaper">
-          <p class="letter__greeting"></p>
-          <div class="letter__body"></div>
-          <p class="letter__sig"></p>
-        </div>
-        <div class="envelope__flap"></div>
-        <div class="envelope__seal" id="waxSeal">
-          <span class="wax-seal__text">E ♡ A</span>
+    <div class="letter__head" id="letterHead"></div>
+
+    <div id="envelopeWrap" class="envelope-wrap">
+      <div id="envelope" class="envelope" role="button" tabindex="0"
+           aria-expanded="false" aria-label="Open Elton's letter">
+        <div class="envelope__body">
+          <span class="envelope__paper-edge" aria-hidden="true"></span>
+          <div class="envelope__back" aria-hidden="true"></div>
+          <div class="envelope__front" aria-hidden="true"></div>
+          <div class="envelope__flap" aria-hidden="true"></div>
+          <div id="waxSeal" class="wax-seal" aria-hidden="true"><span class="wax-seal__text">E ♡ A</span></div>
+          <span class="envelope__to" aria-hidden="true">For Anziya</span>
+          <span class="envelope__stamp" aria-hidden="true">08 · XI</span>
         </div>
       </div>
-      <p class="tap-hint letter-hint" id="letterHint">
-        <span class="tap-hint__arrow" aria-hidden="true"></span>
-        <span class="tap-hint__text">Tap the wax seal to open</span>
-      </p>
+
+      <article id="letterPaper" class="letter-paper" aria-hidden="true">
+        <div class="letter-paper__clip">
+          <div class="letter-paper__inner">
+            <p class="letter__greeting"></p>
+            <div class="letter__body"></div>
+            <p class="letter__sig"></p>
+            <span class="letter-paper__mark" aria-hidden="true">E ♡ A</span>
+          </div>
+        </div>
+      </article>
     </div>
+
+    <p class="tap-hint letter-hint" id="letterHint">
+      <span class="tap-hint__arrow" aria-hidden="true"></span>
+      <span class="tap-hint__text"></span>
+    </p>
   </section>
 
-  <!-- SCENE 6 · the quiet pause & birthday candle -->
+  <!-- SCENE 07 · THE WISH -->
   <section id="pause" class="pause">
     <div class="pause__stage">
+      <p class="pause__ghost" aria-hidden="true">make a wish</p>
       <div class="pause__lines"></div>
 
-      <!-- Interactive candle: tap to blow out & make a wish -->
       <div id="candleStage" class="candle-stage">
         <p class="candle__prompt"></p>
-        <div id="birthdayCandle" class="candle" role="button" tabindex="0" aria-label="Make a wish and blow out the candle">
-          <div class="candle__flame" id="flame">
-            <span class="flame__core"></span>
+        <div id="birthdayCandle" class="candle" role="button" tabindex="0"
+             aria-label="Make a wish and blow out the candle">
+          <span class="candle__halo" aria-hidden="true"></span>
+          <div class="candle__flame" id="flame" aria-hidden="true">
             <span class="flame__glow"></span>
+            <span class="flame__core"></span>
           </div>
-          <div class="candle__smoke" id="smoke"></div>
-          <div class="candle__wick"></div>
-          <div class="candle__body">
-            <span class="candle__wax-drip"></span>
+          <div class="candle__smoke" id="smoke" aria-hidden="true"></div>
+          <div class="candle__wick" aria-hidden="true"></div>
+          <div class="candle__body" aria-hidden="true">
+            <span class="candle__shine"></span>
+            <span class="candle__drip"></span>
           </div>
+          <span class="candle__puddle" aria-hidden="true"></span>
         </div>
         <p class="candle__hint" id="candleHint"></p>
       </div>
 
-      <!-- The final gift reveal -->
       <div class="pause__reveal">
-        <div id="openFinal" class="gift-tap" role="button" tabindex="0">
+        <p class="pause__reveal-kicker">One last thing</p>
+        <div id="openFinal" class="gift-tap" role="button" tabindex="0" aria-label="Open the final gift">
           <div id="finalGift" class="gift-slot gift-slot--sm"></div>
         </div>
         <p class="tap-hint" id="finalHint">
@@ -155,30 +260,28 @@
 
 </main>
 
-<!-- Floating memory progress counter -->
-<div id="memProgress" class="mem-progress" aria-hidden="true">
-  <span class="mem-progress__num"></span>
-  <span class="mem-progress__bar"><i></i></span>
-</div>
 
-
-<!-- ══ SCENE 7 · THE FINAL REVEAL (Hero Finale) ═══════════════════════════ -->
-<section id="finale" class="overlay overlay--finale" aria-hidden="true">
-  <canvas id="glyph" class="glyph-canvas" aria-hidden="true"></canvas>
+<!-- ══ SCENE 08 · THE FINALE ════════════════════════════════════════════════ -->
+<section id="finale" class="finale" aria-hidden="true">
+  <canvas id="glyph" class="finale__canvas" aria-hidden="true"></canvas>
   <div id="finaleLight" class="finale__light" aria-hidden="true"></div>
+  <span class="finale__ghost" aria-hidden="true">08 · XI</span>
 
   <div class="finale__inner">
+    <p class="finale__eyebrow">A final note, in pictures</p>
     <figure class="finale__photo">
       <img id="finalPhoto" alt="" decoding="async">
+      <span class="finale__photo-frame" aria-hidden="true"></span>
     </figure>
     <h2 id="finaleName" class="finale__name"></h2>
     <div id="finaleLines" class="finale__lines"></div>
-    <button id="replay" class="btn btn--ghost finale__replay" type="button">
+    <button id="replay" class="btn btn--ghost finale__replay" type="button" data-magnetic data-cursor="Again">
       <span class="btn__label"></span>
     </button>
   </div>
 
   <button id="skipFinale" class="skip skip--finale" type="button">Skip</button>
+  <p class="finale__credits">Made with love, for Anziya <span aria-hidden="true">·</span> E ♡ A</p>
 </section>
 
 <noscript>
@@ -187,12 +290,12 @@
 
 <audio id="bgm" loop preload="none"></audio>
 
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"></script>
-<script src="js/config.js?v=1"></script>
-<script src="js/particles.js?v=1"></script>
-<script src="js/scenes.js?v=1"></script>
-<script src="js/script.js?v=1"></script>
+<script src="js/vendor/gsap.min.js"></script>
+<script src="js/vendor/ScrollTrigger.min.js"></script>
+<script src="js/vendor/lenis.min.js"></script>
+<script src="js/config.js?v=4"></script>
+<script src="js/particles.js?v=7"></script>
+<script src="js/scenes.js?v=4"></script>
+<script src="js/script.js?v=7"></script>
 </body>
 </html>
