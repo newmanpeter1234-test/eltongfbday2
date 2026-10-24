@@ -226,6 +226,7 @@ const birthdayConfig = {
 
   /* ── 09 · THE FINALE ─────────────────────────────────────────────────── */
   final: {
+    /* The last picture she sees — the portrait in the red gown. */
     photo: "assets/photos/photo11.jpg",
     w: 3024, h: 4032,
     photoAlt: "Anziya looking stunning in her red gown with Elton",

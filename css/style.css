@@ -572,6 +572,89 @@ html.has-cursor [role="button"] { cursor: none; }
   padding-left: .4em;
 }
 
+/* ── Letter chapter scroll cue — persistent, never fades on a timer ───────── */
+.letter-cue {
+  position: fixed; right: var(--gutter); bottom: calc(1.15rem + env(safe-area-inset-bottom));
+  z-index: 62;
+  display: inline-flex; align-items: center; gap: .55rem;
+  padding: .5rem .95rem .5rem .6rem;
+  border: 1px solid rgba(230, 203, 160, .22);
+  border-radius: 999px;
+  background: rgba(9, 4, 7, .56);
+  -webkit-backdrop-filter: blur(12px) saturate(1.15);
+  backdrop-filter: blur(12px) saturate(1.15);
+  box-shadow: 0 18px 40px -22px rgba(0, 0, 0, .95);
+  color: rgba(250, 246, 242, .82);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transform: translateY(14px);
+  transition: opacity .7s ease, transform .7s var(--ease-out), visibility .7s, border-color .4s ease, color .4s ease;
+}
+.letter-cue.is-on {
+  opacity: 1; visibility: visible; pointer-events: auto;
+  transform: none;
+}
+.letter-cue.is-on { animation: cueGlow 3.4s ease-in-out 1.2s infinite; }
+.letter-cue:hover, .letter-cue:focus-visible {
+  color: var(--text);
+  border-color: rgba(231, 160, 182, .55);
+}
+@keyframes cueGlow {
+  0%, 100% { box-shadow: 0 18px 40px -22px rgba(0, 0, 0, .95), 0 0 0 0 rgba(231, 160, 182, 0); }
+  50%      { box-shadow: 0 18px 40px -22px rgba(0, 0, 0, .95), 0 0 0 7px rgba(231, 160, 182, .09); }
+}
+.letter-cue__mouse {
+  position: relative;
+  width: 14px; height: 21px; flex: none;
+  border: 1px solid rgba(231, 160, 182, .5);
+  border-radius: 8px;
+}
+.letter-cue__mouse i {
+  position: absolute; left: 50%; top: 4px;
+  width: 2px; height: 4px; margin-left: -1px;
+  border-radius: 2px; background: var(--rose);
+  animation: cueWheel 2.1s cubic-bezier(.4, 0, .25, 1) infinite;
+}
+@keyframes cueWheel {
+  0%   { transform: translateY(0); opacity: 0; }
+  16%  { opacity: 1; }
+  68%  { transform: translateY(7px); opacity: 1; }
+  100% { transform: translateY(9px); opacity: 0; }
+}
+.letter-cue__text {
+  font-size: .5rem; letter-spacing: .32em; text-transform: uppercase;
+  padding-left: .1em;
+  white-space: nowrap;
+}
+.letter-cue__chev {
+  width: 6px; height: 6px; flex: none;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  transform: rotate(45deg) translate(-1px, -1px);
+  opacity: .6;
+  animation: cueChev 2.1s ease-in-out infinite;
+}
+@keyframes cueChev {
+  0%, 100% { transform: rotate(45deg) translate(-1px, -1px); opacity: .35; }
+  50%      { transform: rotate(45deg) translate(1px, 1px); opacity: .85; }
+}
+/* narrow screens: the paper owns the width, so the cue docks bottom-centre */
+@media (max-width: 899px) {
+  .letter-cue {
+    right: auto; left: 50%;
+    bottom: calc(.95rem + env(safe-area-inset-bottom));
+    padding: .5rem .85rem .5rem .55rem; gap: .5rem;
+    transform: translate(-50%, 14px);
+  }
+  .letter-cue.is-on { transform: translate(-50%, 0); }
+}
+@media (max-width: 640px) {
+  .letter-cue { bottom: calc(.8rem + env(safe-area-inset-bottom)); gap: .42rem; }
+  .letter-cue__text { font-size: .45rem; letter-spacing: .24em; }
+  .letter-cue__mouse { width: 13px; height: 19px; }
+}
+
 .skip {
   position: absolute; left: 50%; bottom: calc(1.3rem + env(safe-area-inset-bottom));
   transform: translateX(-50%);
@@ -833,7 +916,7 @@ html.has-cursor [role="button"] { cursor: none; }
 /* ── 13 · REDUCED MOTION ─────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .gift__svg, .gift__aura, .music__eq i, .tap-hint__arrow,
+  .gift__svg, .gift__aura, .music__eq i, .tap-hint__arrow, .letter-cue__mouse i, .letter-cue__chev,
   .intro__orbit, .bg__orb, .scroll-cue__line { animation: none !important; }
   *, *::before, *::after {
     transition-duration: .01ms !important;
@@ -844,6 +927,9 @@ html.has-cursor [role="button"] { cursor: none; }
 
 /* Safety net: if JS fails, the journey is still readable after the intro is skipped */
 .no-motion .scroll-cue__line { animation: none; }
+.no-motion .letter-cue,
+.no-motion .letter-cue__mouse i,
+.no-motion .letter-cue__chev { animation: none !important; }
 .no-motion .intro__orbit { display: none; }
 
 

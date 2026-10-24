@@ -212,6 +212,13 @@ const Glyph = (function () {
   let pts = [], raf = null, alive = false, fade = 1, phase = 'idle', t0 = 0;
   let reduced = false, shape = 'heart';
 
+  /* The heart beats exactly twice, then it lets go.
+     Beat 1 lands just after the particles finish gathering; beat 2 follows one
+     period later, so the pulse reads instead of becoming a long drum roll. */
+  const BEAT_START = 0.95;   /* seconds of gathering before the first pulse */
+  const BEAT_PERIOD = 1.9;   /* seconds between pulses */
+  const MAX_BEATS = 2;
+
   function shapePoint(R) {
     const t = Math.random() * Math.PI * 2;
     let x, y;
@@ -282,9 +289,11 @@ const Glyph = (function () {
     const el = (t - t0) / 1000;
     ctx.clearRect(0, 0, W, H);
 
-    /* Romantic heartbeat pulse rhythm */
-    const beat = Math.sin(el * 3.5);
-    const breathe = 1 + (beat > 0 ? Math.pow(beat, 4) * 0.035 : 0);
+    /* Romantic heartbeat — a sharp squeeze on the beat, then rest.
+       Nothing past MAX_BEATS: the heart should say it twice, not keep going. */
+    const beatPhase = (el - BEAT_START) / BEAT_PERIOD;
+    const beat = beatPhase > MAX_BEATS - 0.5 ? 0 : Math.sin(beatPhase * Math.PI * 2);
+    const breathe = 1 + (beat > 0 ? Math.pow(beat, 4) * 0.055 : 0);
     const cx = W / 2, cy = H / 2;
 
     for (let i = 0; i < pts.length; i++) {

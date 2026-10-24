@@ -471,7 +471,8 @@ const Scenes = (function () {
     if (img) {
       const set = photoSet(f.photo);
       img.alt = f.photoAlt || '';
-      img.sizes = '(min-width: 900px) 300px, 220px';
+      /* the finale frame is ~18rem wide on desktop and 68vw below 900px */
+      img.sizes = '(min-width: 1600px) 324px, (min-width: 900px) 306px, 68vw';
       img.decoding = 'async';
       img.loading = 'lazy';
       if (set) {

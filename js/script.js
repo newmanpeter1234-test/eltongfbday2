@@ -696,28 +696,47 @@
     const hudEl = document.getElementById('hud');
     const hudClear = (hudEl ? hudEl.getBoundingClientRect().height : 74) + 30;
     let pass = 0;
+    let done = false;
+    let mine = window.scrollY;
+
+    /* The framing nudge is only ever a courtesy. The moment she scrolls, it
+       must get out of the way — otherwise the page keeps pulling the letter
+       back under the HUD and the note appears to flicker. */
+    function standDown() { done = true; }
+    const inputs = ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown'];
+    inputs.forEach(function (ev) {
+      window.addEventListener(ev, standDown, { passive: true });
+    });
+    function release() {
+      inputs.forEach(function (ev) { window.removeEventListener(ev, standDown); });
+    }
 
     function snap() {
+      if (done) return;
       const drift = paper.getBoundingClientRect().top - hudClear;
       if (Math.abs(drift) < 1) return;
       if (lenis) lenis.scrollTo(window.scrollY + drift, { immediate: true });
       else window.scrollTo(0, window.scrollY + drift);
+      mine = window.scrollY;
     }
 
     function converge() {
       pass++;
-      if (!paper.isConnected) return;
-      const top = paper.getBoundingClientRect().top;
-      const off = Math.abs(top - hudClear);
+      if (done || !paper.isConnected) { release(); return; }
+      /* she has taken over the scroll — leave her exactly where she is */
+      if (Math.abs(window.scrollY - mine) > 90) { done = true; release(); return; }
 
+      const off = Math.abs(paper.getBoundingClientRect().top - hudClear);
       if (off > 8 && pass <= 5) snap();
 
       if (pass >= 5) {
         if (off > 8) snap();
         scheduleChapter();
+        release();
         return;
       }
       setTimeout(function () {
+        if (done) { release(); return; }
         refreshSoon(0);
         /* let refresh settle, then re-measure and correct again */
         setTimeout(converge, 340);
@@ -725,6 +744,7 @@
     }
 
     const waitForHeight = function (lastH, stable) {
+      if (done) { release(); return; }
       const h = paper.getBoundingClientRect().height;
       const nextStable = Math.abs(h - lastH) < 1 ? stable + 1 : 0;
       if (nextStable >= 3 && h > 40) { converge(); return; }
@@ -768,6 +788,39 @@
          does, so aim only once the height is stable — then verify and snap. */
       settlePaper(paper);
     });
+  }
+
+  /* ══ LETTER SCROLL CUE ═══════════════════════════════════════════════════ */
+  /* Deliberately has no timer: while the letter chapter owns the screen the
+     cue stays lit, so the way forward is never a guess. It only steps aside
+     when the next chapter takes the viewport over. */
+  function letterCue() {
+    const section = $('#letterSection');
+    const cue = $('#letterCue');
+    if (!section || !cue) return;
+
+    let raf = false;
+    function update() {
+      raf = false;
+      const r = section.getBoundingClientRect();
+      const vh = window.innerHeight || 1;
+      const inChapter = r.top < vh * .62 && r.bottom > vh * .40;
+      /* reduced-motion / no-GSAP users never reach 'journey', so judge by
+         geometry alone — and never while the finale owns the screen */
+      cue.classList.toggle('is-on', inChapter && !body.classList.contains('is-finale'));
+    }
+    function schedule() {
+      if (raf) return;
+      raf = true;
+      requestAnimationFrame(update);
+    }
+
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    cue.addEventListener('click', function () {
+      scrollToEl('#pause');
+    });
+    schedule();
   }
 
   /* ══ THE CANDLE ══════════════════════════════════════════════════════════ */
@@ -844,6 +897,7 @@
     announce('A final message for ' + cfg.name + '.');
 
     const light  = $('#finaleLight');
+    const ghost  = $('.finale__ghost');
     const eyebrow = $('.finale__eyebrow');
     const photo  = $('.finale__photo');
     const name   = $('#finaleName');
@@ -860,17 +914,21 @@
 
     finaleTL = gsap.timeline({ defaults: { ease: 'power2.out' } });
 
-    /* Act 1 — darkness, then the light gathers into a beating heart */
+    /* Act 1 — darkness, then the light gathers into a beating heart.
+       The "08 · XI" backdrop leaves first: while the heart is beating the
+       frame holds nothing but the heart. */
+    if (ghost) gsap.set(ghost, { opacity: 1 });
     finaleTL
-      .to({}, { duration: D(.7) })
+      .to({}, { duration: D(.7) }, 0)
+      .to(ghost || {}, { opacity: 0, duration: D(.55), ease: 'power2.in' }, 0)
       .fromTo(light, { opacity: 0, scale: .18 }, { opacity: 1, scale: 1, duration: D(1.5) })
       .call(function () { if (typeof Glyph !== 'undefined' && Glyph.start) Glyph.start(); })
       .to(light, { opacity: .30, duration: D(1.4) }, '-=.4')
-      .to({}, { duration: D(6.2) })   /* let the heart form, beat, and hold */
+      /* two beats only — the heart gathers, squeezes twice, and lets go */
+      .to({}, { duration: D(3.0) })
       /* Act 2 — the heart dissolves and she appears */
       .call(function () { if (typeof Glyph !== 'undefined' && Glyph.dissolve) Glyph.dissolve(); })
-      .to(light, { opacity: 0, duration: D(1.1) }, '-=.2')
-      .to('.finale__ghost', { opacity: 0, duration: D(1.4) }, '<');
+      .to(light, { opacity: 0, duration: D(1.1) }, '-=.2');
 
     if (eyebrow) finaleTL.fromTo(eyebrow, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: D(1) }, '-=.6');
 
@@ -1163,6 +1221,7 @@
     });
 
     loveLetter();
+    letterCue();
     candleScene();
   }
 
