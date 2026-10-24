@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0408">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="For Anziya">
+<meta property="og:title" content="A little something for Anziya">
+<meta property="og:description" content="Almost three years, countless memories, and still my favorite person. Happy Birthday, my love.">
+<meta property="og:image" content="assets/photos/photo11.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="robots" content="noindex, nofollow, noarchive, noimageindex">
+<script>if("scrollRestoration" in history)history.scrollRestoration="manual";</script>
+<title>For Anziya — Happy Birthday, My Love</title>
+
+<link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&display=swap">
+
+<link rel="stylesheet" href="css/style.css?v=1">
+<link rel="stylesheet" href="css/scenes.css?v=1">
+</head>
+
+<body>
+
+<!-- Quiet holding boot screen -->
+<div id="boot" class="boot" aria-hidden="true"><span class="boot__dot"></span></div>
+
+<!-- Ambient background: velvet gradients + particles -->
+<div class="bg" aria-hidden="true"></div>
+<canvas id="fx" class="fx" aria-hidden="true"></canvas>
+<div class="vignette" aria-hidden="true"></div>
+
+<!-- Full-screen light bloom for gift opening -->
+<div id="flash" class="flash" aria-hidden="true"></div>
+
+<!-- Floating romantic music toggle -->
+<button id="musicToggle" class="music" type="button" hidden
+        aria-pressed="false" aria-label="Play background music">
+  <span class="music__eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+</button>
+
+<!-- Screen-reader announcements -->
+<p id="announce" class="sr-only" role="status" aria-live="polite"></p>
+
+
+<!-- ══ SCENE 1 · THE VELVET GIFT ══════════════════════════════════════════ -->
+<section id="intro" class="overlay overlay--intro is-active">
+  <div class="overlay__inner">
+    <p id="introWhisper" class="whisper"></p>
+    <div id="openGift" class="gift-tap" role="button" tabindex="0">
+      <div id="introGift" class="gift-slot"></div>
+    </div>
+    <p class="tap-hint" id="introHint">
+      <span class="tap-hint__arrow" aria-hidden="true"></span>
+      <span class="tap-hint__text"></span>
+    </p>
+  </div>
+  <button id="skipIntro" class="skip" type="button"></button>
+</section>
+
+
+<!-- ══ THE JOURNEY (Scroll-driven story) ═══════════════════════════════════ -->
+<main id="journey" class="journey is-veiled" aria-hidden="true">
+
+  <!-- SCENE 2 · birthday reveal -->
+  <section id="reveal" class="scene reveal">
+    <p class="reveal__greeting"><span class="mask"><span class="mask__i" data-rv></span></span></p>
+    <h1 class="reveal__name"><span class="mask"><span class="mask__i" data-rv></span></span></h1>
+    <p class="reveal__date"><span class="mask"><span class="mask__i" data-rv></span></span></p>
+    <div class="rule" data-rv></div>
+    <div class="reveal__lines"></div>
+    <div class="scroll-cue" data-rv>
+      <span class="scroll-cue__text"></span>
+      <span class="scroll-cue__line" aria-hidden="true"></span>
+    </div>
+  </section>
+
+  <!-- SCENE 3 · photo memories -->
+  <section id="memoriesIntro" class="chapter chapter--center"></section>
+  <div id="memories" class="memories"></div>
+
+  <!-- SCENE 4 · video memories -->
+  <section id="videosIntro" class="chapter chapter--side"></section>
+  <div id="videos" class="videos"></div>
+
+  <!-- SCENE 5 · three-year timeline -->
+  <section id="timeline" class="timeline"></section>
+
+  <!-- SCENE 5.5 · the interactive love letter -->
+  <section id="letterSection" class="letter-section">
+    <div class="letter-wrap">
+      <div class="chapter chapter--center letter-header">
+        <p class="chapter__label rv">A Note For You</p>
+        <h2 class="chapter__title rv">From Elton’s Heart</h2>
+        <div class="chapter__rule rv"></div>
+      </div>
+      
+      <div id="envelope" class="envelope rv" role="button" tabindex="0" aria-label="Tap to open love letter">
+        <div class="envelope__back"></div>
+        <div class="envelope__paper" id="letterPaper">
+          <p class="letter__greeting"></p>
+          <div class="letter__body"></div>
+          <p class="letter__sig"></p>
+        </div>
+        <div class="envelope__flap"></div>
+        <div class="envelope__seal" id="waxSeal">
+          <span class="wax-seal__text">E ♡ A</span>
+        </div>
+      </div>
+      <p class="tap-hint letter-hint" id="letterHint">
+        <span class="tap-hint__arrow" aria-hidden="true"></span>
+        <span class="tap-hint__text">Tap the wax seal to open</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- SCENE 6 · the quiet pause & birthday candle -->
+  <section id="pause" class="pause">
+    <div class="pause__stage">
+      <div class="pause__lines"></div>
+
+      <!-- Interactive candle: tap to blow out & make a wish -->
+      <div id="candleStage" class="candle-stage">
+        <p class="candle__prompt"></p>
+        <div id="birthdayCandle" class="candle" role="button" tabindex="0" aria-label="Make a wish and blow out the candle">
+          <div class="candle__flame" id="flame">
+            <span class="flame__core"></span>
+            <span class="flame__glow"></span>
+          </div>
+          <div class="candle__smoke" id="smoke"></div>
+          <div class="candle__wick"></div>
+          <div class="candle__body">
+            <span class="candle__wax-drip"></span>
+          </div>
+        </div>
+        <p class="candle__hint" id="candleHint"></p>
+      </div>
+
+      <!-- The final gift reveal -->
+      <div class="pause__reveal">
+        <div id="openFinal" class="gift-tap" role="button" tabindex="0">
+          <div id="finalGift" class="gift-slot gift-slot--sm"></div>
+        </div>
+        <p class="tap-hint" id="finalHint">
+          <span class="tap-hint__arrow" aria-hidden="true"></span>
+          <span class="tap-hint__text"></span>
+        </p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Floating memory progress counter -->
+<div id="memProgress" class="mem-progress" aria-hidden="true">
+  <span class="mem-progress__num"></span>
+  <span class="mem-progress__bar"><i></i></span>
+</div>
+
+
+<!-- ══ SCENE 7 · THE FINAL REVEAL (Hero Finale) ═══════════════════════════ -->
+<section id="finale" class="overlay overlay--finale" aria-hidden="true">
+  <canvas id="glyph" class="glyph-canvas" aria-hidden="true"></canvas>
+  <div id="finaleLight" class="finale__light" aria-hidden="true"></div>
+
+  <div class="finale__inner">
+    <figure class="finale__photo">
+      <img id="finalPhoto" alt="" decoding="async">
+    </figure>
+    <h2 id="finaleName" class="finale__name"></h2>
+    <div id="finaleLines" class="finale__lines"></div>
+    <button id="replay" class="btn btn--ghost finale__replay" type="button">
+      <span class="btn__label"></span>
+    </button>
+  </div>
+
+  <button id="skipFinale" class="skip skip--finale" type="button">Skip</button>
+</section>
+
+<noscript>
+  <div class="noscript">This gift needs JavaScript enabled to open. With love, Elton. ♥</div>
+</noscript>
+
+<audio id="bgm" loop preload="none"></audio>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"></script>
+<script src="js/config.js?v=1"></script>
+<script src="js/particles.js?v=1"></script>
+<script src="js/scenes.js?v=1"></script>
+<script src="js/script.js?v=1"></script>
+</body>
+</html>
