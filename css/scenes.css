@@ -223,6 +223,11 @@
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   background: rgba(6, 2, 4, .28);
+}
+/* the edge fade has to be a mask: the marquee scrolls over the animated orb
+   gradient, so a solid-colour gradient overlay would read as a dark smear.
+   The masked track stays composited, so this costs nothing while scrolling. */
+.marquee {
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
 }
@@ -406,8 +411,10 @@
   gap: clamp(2.2rem, 4.5vw, 5.5rem);
   height: 100%;
   padding-inline: var(--gutter);
-  /* no permanent will-change: a layer this wide is expensive to keep resident
-     for the whole journey. ScrollTrigger promotes it while the gallery is live. */
+  /* this track is translated for the whole pinned gallery; without promotion
+     the compositor re-rasterises the panels every frame instead of sliding a
+     ready-made layer (measured as "Layerize" time in a trace) */
+  will-change: transform;
 }
 
 .panel {
@@ -438,6 +445,8 @@
 .panel__zoom {
   display: block;
   width: 100%; height: 100%;
+  /* parallax-scrubbed while the gallery is pinned */
+  will-change: transform;
 }
 .panel__media img {
   width: 100%; height: 100%;
@@ -1088,8 +1097,7 @@
 .letter-paper__inner::before {
   content: "";
   position: absolute; inset: 0;
-  background: repeating-linear-gradient(180deg, transparent 0 35px, rgba(42, 13, 25, .045) 35px 36px);
-  mix-blend-mode: multiply;
+  background: repeating-linear-gradient(180deg, transparent 0 35px, rgba(42, 13, 25, .05) 35px 36px);
   pointer-events: none;
   opacity: .7;
 }

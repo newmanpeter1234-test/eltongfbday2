@@ -124,8 +124,18 @@ const Particles = (function () {
     ctx.globalAlpha = 1;
   }
 
+  /* While the page is moving the dust is frozen. It is a slow background
+     drift, so freezing is invisible, but it takes a full-viewport canvas
+     clear + 120 sprite blits per frame off the main thread exactly when the
+     scroll needs it. It resumes ~140ms after the scroll settles. */
+  let lastScroll = 0;
+  window.addEventListener('scroll', function () {
+    lastScroll = Date.now();
+  }, { passive: true });
+
   function loop(t) {
     if (!alive) return;
+    if (Date.now() - lastScroll < 140) { raf = requestAnimationFrame(loop); return; }
     /* ~40fps is indistinguishable for drifting dust and leaves the main
        thread room for scrolling */
     if (t - last > 24) { render(t); last = t; }

@@ -127,30 +127,27 @@ html.is-locked, body.is-locked { overflow: hidden; }
 .bg__orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  /* these drift continuously, so they must stay on the compositor —
-     re-rasterising an 80px blur every frame is what causes stutter */
+  /* No filter: blur() here. The orb is already a radial gradient that fades to
+     nothing, so an 80px blur sat on top of it barely changed the picture while
+     forcing the GPU to keep an offscreen blur buffer for each of the three
+     orbs, every frame, for the whole life of the page. Softening the gradient
+     stops does the same job with no extra buffer at all. */
   will-change: transform;
   opacity: .5;
 }
-/* phones rasterise filters on the GPU far more slowly: a smaller radius is
-   visually identical at this scale and much cheaper */
-@media (max-width: 899px) {
-  .bg__orb { filter: blur(46px); }
-}
 .bg__orb--1 {
   width: 52vw; height: 52vw; left: -14vw; top: -12vw;
-  background: radial-gradient(closest-side, rgba(90, 17, 40, .55), transparent 70%);
+  background: radial-gradient(closest-side, rgba(90, 17, 40, .55) 0%, rgba(90, 17, 40, .34) 34%, rgba(90, 17, 40, .12) 64%, transparent 100%);
   animation: orbDrift1 28s ease-in-out infinite alternate;
 }
 .bg__orb--2 {
   width: 42vw; height: 42vw; right: -10vw; top: 28vh;
-  background: radial-gradient(closest-side, rgba(180, 85, 111, .28), transparent 70%);
+  background: radial-gradient(closest-side, rgba(180, 85, 111, .28) 0%, rgba(180, 85, 111, .17) 34%, rgba(180, 85, 111, .06) 64%, transparent 100%);
   animation: orbDrift2 34s ease-in-out infinite alternate;
 }
 .bg__orb--3 {
   width: 38vw; height: 38vw; left: 22vw; bottom: -18vw;
-  background: radial-gradient(closest-side, rgba(230, 203, 160, .16), transparent 70%);
+  background: radial-gradient(closest-side, rgba(230, 203, 160, .16) 0%, rgba(230, 203, 160, .10) 34%, rgba(230, 203, 160, .035) 64%, transparent 100%);
   animation: orbDrift3 31s ease-in-out infinite alternate;
 }
 @keyframes orbDrift1 { to { transform: translate3d(6vw, 5vw, 0) scale(1.1); } }
@@ -169,8 +166,11 @@ html.is-locked, body.is-locked { overflow: hidden; }
 .grain {
   position: fixed; inset: 0; z-index: 95;
   pointer-events: none;
-  opacity: .055;
-  mix-blend-mode: overlay;
+  /* No mix-blend-mode. A blended fixed layer cannot be composited on its own:
+     the browser has to read the whole page back and re-blend it every single
+     frame the page moves, which shows up as scroll-only stutter. At this
+     opacity plain alpha over these near-black scenes looks the same. */
+  opacity: .05;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
   background-size: 220px 220px;
 }
@@ -187,7 +187,6 @@ html.is-locked, body.is-locked { overflow: hidden; }
   position: fixed; inset: 0; z-index: 90;
   pointer-events: none;
   opacity: 0;
-  mix-blend-mode: screen;
   background: radial-gradient(circle at 50% 54%,
     rgba(255, 246, 249, .98) 0%, rgba(248, 212, 223, .62) 22%,
     rgba(120, 28, 56, .28) 48%, transparent 74%);
@@ -236,8 +235,13 @@ html.is-locked, body.is-locked { overflow: hidden; }
 
 /* kinetic word/char masks */
 .w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .06em; }
-.w__i { display: inline-block; will-change: transform; }
-.char { display: inline-block; will-change: transform; }
+/* No standing will-change on the reveal spans. There are ~30 of them and each
+   one was permanently promoted, so the compositor built and threw away a layer
+   every time one crossed the viewport edge (constant "Layerize" work while
+   scrolling). GSAP promotes them with translate3d for the moment they animate,
+   which is the only time it helps. */
+.w__i { display: inline-block; }
+.char { display: inline-block; }
 
 /* ── 05 · LOADER ─────────────────────────────────────────────────────────── */
 .loader {
@@ -341,8 +345,6 @@ html.is-locked, body.is-locked { overflow: hidden; }
      biggest scroll-jank sources on phones. The gradient alone reads the same
      over these dark scenes. */
   background: linear-gradient(to bottom, rgba(6, 2, 4, .88), rgba(6, 2, 4, .42) 55%, transparent);
-  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
-  mask-image: linear-gradient(to bottom, #000 55%, transparent);
   pointer-events: none;
 }
 body.is-live .hud { opacity: 1; transform: none; pointer-events: auto; }

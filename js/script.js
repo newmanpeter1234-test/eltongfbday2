@@ -138,8 +138,8 @@
         return;
       }
       ScrollTrigger.refresh();
-      /* pinning rewrites the document height */
-      maxScroll = -1;
+      /* pinning rewrites the document height and every section's position */
+      invalidateLayout();
     };
     refreshTimer = setTimeout(go, delay || 150);
   }
@@ -198,7 +198,10 @@
     if (maxScroll < 0) maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
     return maxScroll;
   }
-  window.addEventListener('resize', function () { maxScroll = -1; }, { passive: true });
+  window.addEventListener('resize', function () {
+    maxScroll = -1;
+    if (typeof invalidateLayout === 'function') invalidateLayout();
+  }, { passive: true });
   function updateProgress(y) {
     if (!hudBar) return;
     if (progressRaf || body.classList.contains('is-finale')) return;
@@ -245,26 +248,44 @@
     });
   }
 
-  function computeChapter() {
-    const marker = window.innerHeight * 0.55;
-    let idx = 0;
+  /* Chapter positions are measured once and kept in document space. Reading
+     seven bounding rects on every scroll frame was forcing a full layout
+     before the scroll could be painted — the single biggest scroll-only cost
+     on a phone, and completely invisible on a fast desktop. */
+  let chapterMarks = null;
+  let cueBox = null;
+
+  function invalidateLayout() {
+    chapterMarks = null;
+    cueBox = null;
+    maxScroll = -1;
+  }
+
+  function buildChapterMarks() {
+    chapterMarks = [];
     for (let i = 0; i < CHAPTERS.length; i++) {
       if (CHAPTERS[i].id === 'finale') continue;
       const node = document.getElementById(CHAPTERS[i].id);
       if (!node) continue;
-      const r = node.getBoundingClientRect();
       /* A pinned section keeps its trigger pinned at top:0 while ScrollTrigger
          extends it with a spacer, so its rect no longer marks where we are.
          The spacer does — it sits above the next chapter in document order. */
-      const spacer = node.parentElement && node.parentElement.classList.contains('pin-spacer')
+      const box = (node.parentElement && node.parentElement.classList.contains('pin-spacer'))
         ? node.parentElement
-        : null;
-      const top = spacer ? spacer.getBoundingClientRect().top : r.top;
-      /* a mid-refresh measurement can momentarily report 0 for every section,
-         so require the section to genuinely hold the marker band */
-      const holds = top <= marker && (r.bottom > marker * .2 || top < -1);
-      if (holds) idx = i;
-      else if (top > marker) break;
+        : node;
+      const r = box.getBoundingClientRect();
+      const top = r.top + window.scrollY;
+      chapterMarks.push({ i: i, top: top, bottom: top + r.height });
+    }
+  }
+
+  function computeChapter() {
+    if (!chapterMarks) buildChapterMarks();
+    const y = window.scrollY + window.innerHeight * 0.55;
+    let idx = 0;
+    for (let k = 0; k < chapterMarks.length; k++) {
+      if (y >= chapterMarks[k].top) idx = chapterMarks[k].i;
+      else break;
     }
     setChapter(idx);
   }
@@ -671,6 +692,9 @@
     }
   }
 
+  let lastBgOpacity = 1;
+  let lastIntensityAt = -1;
+
   function pauseScene() {
     const sec = $('#pause');
     if (!sec) return;
@@ -712,12 +736,25 @@
       trigger: sec, start: 'top top', end: 'bottom bottom',
       onUpdate: function (self) {
         showCandle(self.progress > .62);
-        intensity(1 - self.progress * .55);
-        if (bg) bg.style.opacity = String(1 - self.progress * .45);
+        /* .bg is a fixed, full-viewport layer carrying three radial gradients
+           and three 80px-blurred orbs. Rewriting its opacity 60 times a second
+           makes the compositor re-composite that whole layer every frame, so
+           only write when the value has actually moved. */
+        const o = 1 - self.progress * .45;
+        if (bg && Math.abs(o - lastBgOpacity) > .015) {
+          lastBgOpacity = o;
+          bg.style.opacity = String(o);
+        }
+        if (Math.abs(self.progress - lastIntensityAt) > .04) {
+          lastIntensityAt = self.progress;
+          intensity(1 - self.progress * .55);
+        }
       },
       onLeaveBack: function () {
         showCandle(false);
         intensity(1);
+        lastBgOpacity = 1;
+        lastIntensityAt = -1;
         if (bg) bg.style.opacity = '1';
       }
     });
@@ -803,6 +840,8 @@
     press(env, function () {
       if (wrap.classList.contains('is-open')) return;
       wrap.classList.add('is-open');
+      /* the paper grows as it unfolds — re-measure the chapter box */
+      setTimeout(function () { cueBox = null; invalidateLayout(); }, 1400);
       env.setAttribute('aria-expanded', 'true');
       if (paper) paper.setAttribute('aria-hidden', 'false');
       if (hint) hint.style.opacity = '0';
@@ -838,9 +877,14 @@
     let raf = false;
     function update() {
       raf = false;
-      const r = section.getBoundingClientRect();
+      if (!cueBox) {
+        const r = section.getBoundingClientRect();
+        const y = window.scrollY;
+        cueBox = { top: r.top + y, bottom: r.bottom + y };
+      }
+      const y = window.scrollY;
       const vh = window.innerHeight || 1;
-      const inChapter = r.top < vh * .62 && r.bottom > vh * .40;
+      const inChapter = (cueBox.top - y) < vh * .62 && (cueBox.bottom - y) > vh * .40;
       /* reduced-motion / no-GSAP users never reach 'journey', so judge by
          geometry alone — and never while the finale owns the screen */
       cue.classList.toggle('is-on', inChapter && !body.classList.contains('is-finale'));
