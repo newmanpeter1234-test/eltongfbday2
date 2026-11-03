@@ -8,6 +8,23 @@ const birthdayConfig = {
   /* Her name. Used in the reveal, the final scene and the browser tab. */
   name: "Anziya",
 
+  /* ── TYPEFACE FOR HER NAME ────────────────────────────────────────────────
+     Which display font the big "Anziya" is set in. The "Y" is the letter to
+     judge — in the original Cormorant Garamond the tail is straight and very
+     light, so it reads like a "V". Try these, easiest first:
+
+       "playfair"   Playfair Display — heavier, clear curled y-tail  (recommended)
+       "prata"      Prata — high-contrast didone, strongly hooked y
+       "bodoni"     Bodoni Moda — dramatic thick/thin, unmistakable y
+       "marcellus"  Marcellus — calm classical, round bowls
+       "cinzel"     Cinzel — Roman capitals, very legible
+       "garamond"   EB Garamond — soft warm book face
+       "cormorant"  Cormorant Garamond — the original
+
+     You can also preview any of them without editing this file by adding
+     ?font=playfair to the end of the URL.                                       */
+  nameFont: "playfair",
+
   /* Text shown in the browser tab. */
   pageTitle: "For Anziya — Happy Birthday, My Love",
 
@@ -43,8 +60,8 @@ const birthdayConfig = {
       image: "assets/photos/photo01.jpg",
       label: "Where It Began",
       title: "Where All of This Started",
-      caption: "A simple mirror selfie, a makeshift sling, and little did I know you'd become my favorite person.",
-      alt: "Anziya's first mirror selfie with sling where the story began"
+      caption: "A broken hand, one mirror selfie, and a boy who simply had to tease you. From that silly chase came our first real conversation — and somehow, everything started right there.",
+      alt: "Anziya's first mirror selfie with a makeshift sling where the story began"
     },
     {
       image: "assets/photos/photo02.jpg",
@@ -135,7 +152,7 @@ const birthdayConfig = {
   timeline: [
     {
       label: "The Beginning",
-      text: "Two strangers, one simple mirror selfie, and the start of something I never wanted to end.",
+      text: "A broken hand, a mirror selfie, and one teasing message that turned two strangers into everything.",
       image: "assets/photos/photo01.jpg"
     },
     {

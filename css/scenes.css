@@ -52,10 +52,11 @@
 }
 .reveal__name {
   font-family: var(--font-display);
-  font-weight: 300;
+  font-weight: var(--name-weight, 300);
+  font-stretch: var(--name-stretch, 100%);
   font-size: clamp(3.8rem, 20vw, 11rem);
-  line-height: .92;
-  letter-spacing: -.02em;
+  line-height: 1;
+  letter-spacing: var(--name-tracking, -.02em);
   margin: 0;
   position: relative;
 }
@@ -69,6 +70,13 @@
   background: linear-gradient(180deg, #fff7f9 12%, #f7c2d1 52%, #cf7a96 85%, #b34b6e 100%);
   -webkit-background-clip: text; background-clip: text;
   color: transparent; -webkit-text-fill-color: transparent;
+  /* `background-clip:text` only paints inside this box. The tail of the "y"
+     hangs below the line box, so without extra padding the descender has no
+     gradient behind it and renders transparent — which made Anziya read as
+     "Anziva". Pad the box down over the descender; the negative margin keeps
+     the visual position unchanged. */
+  padding-block: .04em .20em;
+  margin-block: -.04em -.20em;
 }
 .reveal__date {
   margin: clamp(.5rem, 1.6vh, 1rem) 0 0;
@@ -177,6 +185,22 @@
     0 1px 0 rgba(255,255,255,.1) inset,
     0 0 0 1px rgba(247,194,209,.12),
     0 44px 90px -40px rgba(0,0,0,.95);
+}
+/* Photos supplied sideways / mirrored can be corrected per photo from
+   js/config.js via `orientation: { rotate: 90, flip: true }`.
+   `rotate` / `scale` are used instead of `transform` on purpose: the reveal
+   animations animate `transform`, and these two properties compose with it
+   rather than overwriting it. */
+.memory__frame img.is-oriented {
+  rotate: var(--orient-rotate, 0deg);
+  scale: var(--orient-scale, 1 1);
+  object-fit: var(--orient-fit, contain);
+}
+/* A quarter turn makes the painted box taller/wider than the file, so let the
+   frame size itself from the rotated image instead of clipping it. */
+.memory__frame img.is-oriented {
+  max-height: min(62svh, 660px);
+  width: auto;
 }
 .memory__text { max-width:34rem; text-align:center; }
 .memory__title {
@@ -656,6 +680,9 @@
   background: linear-gradient(180deg, #fff7f9, #f7c2d1 50%, #d97897);
   -webkit-background-clip: text; background-clip: text;
   color: transparent; -webkit-text-fill-color: transparent;
+  /* Same reason as .reveal__name: give the gradient room over descenders. */
+  padding-block: .04em .18em;
+  margin-block: -.04em -.18em;
 }
 .finale__symbol {
   -webkit-text-fill-color: var(--rose-soft); color: var(--rose-soft);
@@ -704,3 +731,40 @@
 .no-motion .pause__stage { position:static; height:auto; padding-block:6rem; }
 .no-motion .pause__lines, .no-motion .pause__reveal { grid-area:auto; }
 .no-motion .tl__fill { transform:scaleY(1); }
+
+
+/* ══ NAME TYPE STYLES ══════════════════════════════════════════════════════
+   The letter "Y" in "Anziya" reads like a "V" in the default Cormorant
+   Garamond at display size, because that face uses a straight-tailed "y" and
+   the light weight thins the junction. Each block below is one selectable
+   option (`nameFont` in js/config.js). The `y` glyph shape is the thing to
+   compare between them.
+   ========================================================================== */
+
+/* cormorant — the original. Elegant, but the straight y-tail is the problem. */
+[data-name-font="cormorant"] { --font-display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --name-weight: 300; --name-tracking: -.02em; }
+
+/* playfair — heavier, rounder bowl; the y tail curls clearly to the left. */
+[data-name-font="playfair"] { --font-display: "Playfair Display", Georgia, serif;
+  --name-weight: 400; --name-tracking: -.015em; }
+
+/* prata — high-contrast didone with a distinctly hooked y descender. */
+[data-name-font="prata"] { --font-display: "Prata", Georgia, serif;
+  --name-weight: 400; --name-tracking: -.01em; }
+
+/* cinzel — Roman capitals; clean V-vs-Y contrast, very legible. */
+[data-name-font="cinzel"] { --font-display: "Cinzel", Georgia, serif;
+  --name-weight: 400; --name-tracking: .01em; }
+
+/* marcellus — calm classical face, generous round bowls. */
+[data-name-font="marcellus"] { --font-display: "Marcellus", Georgia, serif;
+  --name-weight: 400; --name-tracking: -.005em; }
+
+/* bodoni — dramatic thick/thin didone, unmistakable hooked y. */
+[data-name-font="bodoni"] { --font-display: "Bodoni Moda", Georgia, serif;
+  --name-weight: 400; --name-tracking: 0em; }
+
+/* garamond — soft, warm book face; gentle humanist y. */
+[data-name-font="garamond"] { --font-display: "EB Garamond", Georgia, serif;
+  --name-weight: 400; --name-tracking: 0em; }

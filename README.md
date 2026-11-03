@@ -32,8 +32,43 @@ Then visit: `http://localhost:8124`
 ---
 
 ## 3. How to Customize
+
+### The name font (the "Y" in Anziya)
+In the original typeface the `y` has a straight, very light tail, so at headline
+size it can read like a **V**. Pick a different face with **`nameFont`** in
+`js/config.js`:
+
+| Value | Look |
+|---|---|
+| `"playfair"` *(default)* | Heavier, clear curled y-tail |
+| `"prata"` | High-contrast didone, strongly hooked y |
+| `"bodoni"` | Dramatic thick/thin, unmistakable y |
+| `"marcellus"` | Calm classical, round bowls |
+| `"cinzel"` | Roman capitals, very legible |
+| `"garamond"` | Soft, warm book face |
+| `"cormorant"` | The original |
+
+To compare them all without editing anything, add `?font=` to the URL —
+e.g. `index.html?font=prata`. No rebuild needed; just reload.
+
+### Fixing a sideways or mirrored photo
+Each photo in the `photos` array accepts an optional `orientation` block. The
+image stays untouched on disk; the page corrects it:
+
+```js
+{
+  image: "assets/photos/photo06.jpg",
+  orientation: { rotate: 90, flip: true },  // rotate: 0 | 90 | 180 | 270
+  ...
+}
+```
+
+Use `flip: true` for photos that came out mirrored (text in the picture reads
+backwards). Use `rotate` for photos saved sideways.
+
 Everything text-related lives in **`js/config.js`**:
 * **Name & Dates:** `name`, `reveal.date`
+* **Name typeface:** `nameFont` (see the table above)
 * **Photos & Captions:** `photos` array in `js/config.js`
 * **Video:** `videos` array in `js/config.js`
 * **Love Letter Text:** `letter` object in `js/config.js`

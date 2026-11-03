@@ -156,6 +156,21 @@ const Scenes = (function () {
         img.loading = 'lazy';
         img.dataset.src = item.image;
       }
+
+      /* Optional per-photo orientation, for photos whose pixels are saved
+         sideways or mirrored. Uses the individual `rotate` / `scale` CSS
+         properties (not `transform`) so GSAP's reveal animations, which
+         write `transform`, never clobber it.
+         e.g. orientation: { rotate: 90, flip: true } */
+      const orient = item.orientation;
+      if (orient && (orient.rotate || orient.flip)) {
+        const deg = ((Number(orient.rotate) || 0) % 360 + 360) % 360;
+        img.classList.add('is-oriented');
+        img.style.setProperty('--orient-rotate', deg + 'deg');
+        if (orient.flip) img.style.setProperty('--orient-scale', '-1 1');
+        if (orient.fit) img.style.setProperty('--orient-fit', orient.fit);
+      }
+
       frame.append(img);
 
       const text = el('div', 'memory__text rv');

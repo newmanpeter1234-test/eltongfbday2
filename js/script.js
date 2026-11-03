@@ -111,6 +111,21 @@
 
   function announce(msg) { if (announcer) announcer.textContent = msg; }
 
+  /* ══ Name Typeface ════════════════════════════════════════════════════════
+     Which display face the big "Anziya" is set in. Set `nameFont` in
+     js/config.js to any key in FONT_OPTIONS, or preview one without touching
+     the config by adding ?font=prata to the URL. The "y" is the letter to
+     judge: with Cormorant it reads like a "V" because the tail is straight and
+     the stroke is very light. */
+  const FONT_OPTIONS = ['cormorant', 'playfair', 'prata', 'cinzel', 'marcellus', 'bodoni', 'garamond'];
+
+  function applyNameFont(name) {
+    const key = FONT_OPTIONS.indexOf(String(name || '').toLowerCase()) > -1
+      ? String(name).toLowerCase() : 'cormorant';
+    root.setAttribute('data-name-font', key);
+    return key;
+  }
+
   /* ══ Smooth Scrolling with Lenis ═════════════════════════════════════════ */
   let lenis = null;
   const IS_SAFARI = /^((?!chrome|chromium|crios|android|fxios|edg).)*safari/i.test(navigator.userAgent);
@@ -719,6 +734,10 @@
   function boot() {
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
+
+    /* ?font=… overrides the config, handy for comparing options side by side. */
+    const fontParam = new URLSearchParams(location.search).get('font');
+    applyNameFont(fontParam || cfg.nameFont);
 
     Scenes.build(cfg);
     Particles.init({ reduced: REDUCED, density: (cfg.settings && cfg.settings.particleDensity) || 1.1 });
