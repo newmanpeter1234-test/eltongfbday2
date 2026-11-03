@@ -58,13 +58,17 @@ const birthdayConfig = {
   photos: [
     {
       image: "assets/photos/photo01.jpg",
+      width: 693,
+      height: 1070,
       label: "Where It Began",
       title: "Where All of This Started",
-      caption: "A broken hand, one mirror selfie, and a boy who simply had to tease you. From that silly chase came our first real conversation — and somehow, everything started right there.",
+      caption: "A broken hand, and a boy who simply had to tease you. From that silly chase came our first real conversation — and somehow, everything started right there.",
       alt: "Anziya's first mirror selfie with a makeshift sling where the story began"
     },
     {
       image: "assets/photos/photo02.jpg",
+      width: 848,
+      height: 636,
       label: "Our Crazy Side",
       title: "From Strangers to Us",
       caption: "From strangers to friends, from friends to us. Still no idea what we were doing, but I loved every second.",
@@ -72,6 +76,8 @@ const birthdayConfig = {
     },
     {
       image: "assets/photos/photo03.jpg",
+      width: 900,
+      height: 1600,
       label: "Unfiltered Us",
       title: "Good Vibes Only",
       caption: "Loud, unplanned, and the kind of laughter where you completely lose track of time.",
@@ -79,6 +85,8 @@ const birthdayConfig = {
     },
     {
       image: "assets/photos/photo04.jpg",
+      width: 592,
+      height: 782,
       label: "My Safe Place",
       title: "Just Another Ordinary Day",
       caption: "The ordinary ones turned out to be the best ones. Leaning on you is my favorite feeling.",
@@ -86,6 +94,8 @@ const birthdayConfig = {
     },
     {
       image: "assets/photos/photo05.jpg",
+      width: 1078,
+      height: 718,
       label: "Through It All",
       title: "Growing Together",
       caption: "Through every high and every low, we always found our way back to each other.",
@@ -93,6 +103,8 @@ const birthdayConfig = {
     },
     {
       image: "assets/photos/photo06.jpg",
+      width: 1600,
+      height: 900,
       label: "Quiet Comfort",
       title: "Endless Conversations",
       caption: "So many days have passed, but every moment with you still feels just as special.",
@@ -100,6 +112,8 @@ const birthdayConfig = {
     },
     {
       image: "assets/photos/photo07.jpg",
+      width: 1200,
+      height: 1600,
       label: "Favorite Moments",
       title: "No Explaining Needed",
       caption: "Some people just get it. With you, everything feels effortless and right.",
@@ -107,6 +121,8 @@ const birthdayConfig = {
     },
     {
       image: "assets/photos/photo08.jpg",
+      width: 1200,
+      height: 1600,
       label: "Side by Side",
       title: "Three Years Almost Gone",
       caption: "Three years almost gone, but my love for you only keeps growing with each passing day.",
@@ -114,6 +130,8 @@ const birthdayConfig = {
     },
     {
       image: "assets/photos/photo09.jpg",
+      width: 1159,
+      height: 1600,
       label: "Standing Strong",
       title: "By Your Side",
       caption: "We started with a little moment and built something so beautiful.",
@@ -121,6 +139,8 @@ const birthdayConfig = {
     },
     {
       image: "assets/photos/photo10.jpg",
+      width: 900,
+      height: 1600,
       label: "Our Journey",
       title: "Countless Memories",
       caption: "Almost three years, countless memories, and you are still my favorite person in the entire world.",

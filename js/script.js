@@ -331,6 +331,56 @@
       });
     });
 
+    /* Safety net for late-loading photos.
+       Photos now reserve their box up front, so in normal conditions nothing
+       moves and every reveal fires on its own. This catches the awkward
+       leftovers: a file that lands after the chapter has been measured, a
+       connection that stalls, an image that 404s. Any card that is at or
+       above the current viewport gets shown explicitly, so the chapter can
+       never end up as empty space with its text hidden. Values are written
+       as real numbers (not cleared) because the base `.rv` rule is
+       `opacity: 0` — clearing an inline style would hide the card again. */
+    function revealResolved() {
+      const vh = window.innerHeight || 1;
+      cards.forEach(function (m) {
+        const r = m.getBoundingClientRect();
+        if (r.top > vh * 0.92) return;          /* still well below: leave it */
+
+        const shown = ['.memory__label', '.memory__frame', '.memory__text'];
+        shown.forEach(function (sel) {
+          const n = $(sel, m);
+          if (!n) return;
+          if (parseFloat(getComputedStyle(n).opacity) > 0.9) return;
+          gsap.set(n, { opacity: 1, y: 0 });
+        });
+
+        const st = $('.memory__stage', m);
+        if (st && parseFloat(getComputedStyle(st).opacity) < 0.9) {
+          gsap.set(st, { opacity: 1, y: 0, scale: 1 });
+        }
+
+        $$('img', m).forEach(function (img) {
+          if (parseFloat(getComputedStyle(img).opacity) > 0.9 &&
+              getComputedStyle(img).clipPath === 'none') return;
+          gsap.set(img, { opacity: 1, scale: 1, x: 0, clipPath: 'inset(0% 0% 0% 0%)' });
+        });
+      });
+    }
+
+    cards.forEach(function (m) {
+      const frame = $('.memory__frame', m);
+      if (!frame) return;
+      const img = $('img', frame);
+      if (!img) return;
+      if (img.complete && img.naturalWidth) { return; }
+      const resolved = function () {
+        frame.classList.add('is-ready');
+        revealResolved();
+      };
+      img.addEventListener('load', resolved, { once: true });
+      img.addEventListener('error', resolved, { once: true });
+    });
+
     function setProgress(i) {
       if (num) num.textContent = pad(i + 1) + ' / ' + pad(total);
       if (bar) bar.style.transform = 'scaleX(' + ((i + 1) / total) + ')';
@@ -722,12 +772,31 @@
       if (img.dataset.src) { img.src = img.dataset.src; delete img.dataset.src; }
     }
     if (!('IntersectionObserver' in window)) { targets.forEach(load); return; }
+
+    const seen = new Set(targets);
     const io = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
-        if (e.isIntersecting) { load(e.target); io.unobserve(e.target); }
+        if (e.isIntersecting) { load(e.target); io.unobserve(e.target); seen.delete(e.target); }
       });
     }, { rootMargin: '200% 0px' });
     targets.forEach(function (t) { io.observe(t); });
+
+    /* Belt-and-braces: if an image somehow skipped the observer (zero-size
+       box at observe time, a jump past it, a stalled observer callback) load
+       anything still pending that is anywhere near the viewport. Runs on
+       scroll and on a short timer so nothing can stay a blank slot. */
+    function sweep() {
+      if (!seen.size) return;
+      const vh = window.innerHeight || 1;
+      seen.forEach(function (img) {
+        if (!img.dataset.src) { seen.delete(img); return; }
+        const r = img.getBoundingClientRect();
+        if (r.bottom > -vh && r.top < vh * 3) { load(img); seen.delete(img); io.unobserve(img); }
+      });
+    }
+    window.addEventListener('scroll', sweep, { passive: true });
+    window.addEventListener('resize', sweep, { passive: true });
+    setTimeout(sweep, 1200);
   }
 
   /* ══ Boot Application ════════════════════════════════════════════════════ */

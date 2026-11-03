@@ -169,6 +169,17 @@
   display: flex; justify-content: center;
   width: 100%;
 }
+/* Reserve the photo's final box up front (aspect ratio comes from config.js
+   width/height). `width` must stay definite for aspect-ratio to resolve, so a
+   not-yet-downloaded photo can no longer collapse to zero height and drag
+   every card below it out of position. */
+.memory__frame.is-sized {
+  width: 100%;
+  aspect-ratio: var(--ph-ratio, 3 / 4);
+  max-height: min(58svh, 640px);
+  align-items: center;
+  border-radius: 4px;
+}
 .memory__frame::before {
   content: ""; position: absolute; inset: -8% -6%;
   background: radial-gradient(closest-side, rgba(229,140,168,.2), rgba(110,22,55,.1) 55%, transparent 78%);
@@ -179,12 +190,62 @@
   position: relative; z-index: 1;
   max-height: min(58svh, 640px);
   width: auto; max-width: 100%;
+  /* height:auto + the width/height attributes written by scenes.js let the
+     browser reserve the photo's real box from the first paint. Without them
+     the <img> was 0x0 until the file arrived, so every following card sat
+     hundreds of pixels too high; ScrollTrigger measured those wrong offsets
+     at setup and the reveal for the cards below stayed at opacity:0 — the
+     chapter looked empty. Reserving the box means the layout never shifts. */
+  height: auto;
   border-radius: 4px;
-  background: rgba(255,255,255,.03);
   box-shadow:
     0 1px 0 rgba(255,255,255,.1) inset,
     0 0 0 1px rgba(247,194,209,.12),
     0 44px 90px -40px rgba(0,0,0,.95);
+}
+/* Quiet velvet placeholder while the file is still downloading, so a slow
+   connection shows a softly breathing frame instead of a blank gap. */
+.memory__frame.is-sized:not(.is-ready) img {
+  background:
+    linear-gradient(110deg,
+      rgba(247,194,209,.02) 20%,
+      rgba(247,194,209,.16) 42%,
+      rgba(229,140,168,.22) 50%,
+      rgba(247,194,209,.16) 58%,
+      rgba(247,194,209,.02) 80%),
+    linear-gradient(160deg, #1d0a14, #12040c 60%, #1a0812);
+  background-size: 260% 100%, 100% 100%;
+  animation: phSheen 2.4s linear infinite;
+  box-shadow:
+    0 0 0 1px rgba(247,194,209,.16),
+    0 0 34px -10px rgba(229,140,168,.35);
+}
+@keyframes phSheen {
+  from { background-position: 130% 0, 0 0; }
+  to   { background-position: -130% 0, 0 0; }
+}
+/* Slow connection: say so, rather than leaving an unexplained empty frame. */
+.memory__frame.is-sized:not(.is-ready)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgba(247,194,209,.10), transparent 70%);
+  animation: phPulse 2.4s ease-in-out infinite;
+}
+@keyframes phPulse {
+  0%, 100% { opacity: .35; }
+  50%      { opacity: .9; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .memory__frame.is-sized:not(.is-ready) img,
+  .memory__frame.is-sized:not(.is-ready)::after { animation: none; }
+}
+.memory__frame.is-sized.is-ready img {
+  background: none;
+  animation: none;
+  transition: opacity .5s var(--ease-out);
 }
 /* Photos supplied sideways / mirrored can be corrected per photo from
    js/config.js via `orientation: { rotate: 90, flip: true }`.

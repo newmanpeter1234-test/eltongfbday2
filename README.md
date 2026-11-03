@@ -20,7 +20,7 @@ Then visit: `http://localhost:8124`
 * **Scene 1 (The Velvet Gift):** Floating isometric velvet gift box with rose-gold metallic ribbon. Tapping triggers a glowing lid lift, radiant particle burst, and fades in the romantic music.
 * **Scene 2 (The Reveal):** Grand headline reveal: *"Happy Birthday, Anziya — November 8 — The day the world got a little brighter."*
 * **Scene 3 (Chapter 1 · Photo Memories):** 
-  * **Memory 01:** Her mirror selfie with the makeshift sling where their story began.
+  * **Memory 01:** The broken hand and the teasing that started everything.
   * Followed by their adventures, playful gym flex, cozy selfies, and 3-year journey together.
   * Dynamic reveals (`curtain`, `bloom`, `slide`), parallax drift, and a live counter (`01 / 10`).
 * **Scene 4 (Chapter 2 · Video Memories):** Seamlessly loops video moments silently on scroll; taps pause/play with a glowing rose-gold progress tracker.
@@ -50,6 +50,30 @@ size it can read like a **V**. Pick a different face with **`nameFont`** in
 
 To compare them all without editing anything, add `?font=` to the URL —
 e.g. `index.html?font=prata`. No rebuild needed; just reload.
+
+### How photos load (and why they never leave a blank gap)
+Each entry in the `photos` array records the file's `width` and `height`:
+
+```js
+{
+  image: "assets/photos/photo07.jpg",
+  width: 1200,
+  height: 1600,
+  ...
+}
+```
+
+`scenes.js` copies those onto the `<img>` element, so the browser reserves the
+photo's real box before the file arrives. This matters on a slow connection:
+previously the image was 0×0 until its bytes landed, which pushed every later
+card out of position after ScrollTrigger had already measured the page — the
+photo chapters then scrolled past as empty space. With the box reserved the
+layout never moves, and each frame shimmers softly until its photo paints.
+
+**If you swap in a new photo, update `width` / `height` to match it.** Otherwise
+the reserved box has the wrong shape and the photo will letterbox inside it.
+Keep files around 1600 px on the long edge — that is sharp on a phone at 2×
+and keeps each card a couple of hundred kilobytes.
 
 ### Fixing a sideways or mirrored photo
 Each photo in the `photos` array accepts an optional `orientation` block. The

@@ -149,6 +149,22 @@ const Scenes = (function () {
       const img = el('img');
       img.alt = alt;
       img.decoding = 'async';
+
+      /* Reserve the photo's real box *before* the file arrives.
+         Without this the <img> is 0x0 until the bytes land, so every card
+         below it sits ~600px higher than it will once loaded. ScrollTrigger
+         bakes those wrong positions at setup and never re-measures the cards
+         it has already passed, so the reveal animation stays stuck at
+         opacity:0 and the section reads as empty. Declaring the intrinsic
+         aspect ratio keeps the layout final from the first paint — and gives
+         the visitor a correctly sized, softly shimmering placeholder to look
+         at instead of a blank void. */
+      if (item.width && item.height) {
+        img.width = item.width;
+        img.height = item.height;
+        frame.classList.add('is-sized');
+        frame.style.setProperty('--ph-ratio', item.width + ' / ' + item.height);
+      }
       if (i < 2) {
         img.loading = 'eager';
         img.src = item.image;
@@ -169,6 +185,24 @@ const Scenes = (function () {
         img.style.setProperty('--orient-rotate', deg + 'deg');
         if (orient.flip) img.style.setProperty('--orient-scale', '-1 1');
         if (orient.fit) img.style.setProperty('--orient-fit', orient.fit);
+      }
+
+      /* Swap the placeholder for the photo the moment its pixels are paint-
+         ready, and re-measure ScrollTrigger once so no card is left pinned to
+         a position computed before this image existed. */
+      const settle = function () {
+        frame.classList.add('is-ready');
+        if (window.ScrollTrigger && window.ScrollTrigger.refresh) window.ScrollTrigger.refresh();
+      };
+      if (img.complete && img.naturalWidth) {
+        settle();
+      } else {
+        img.addEventListener('load', settle, { once: true });
+        img.addEventListener('error', function () {
+          /* Never leave a hole where a photo should be. */
+          frame.classList.add('is-ready', 'is-missing');
+          if (window.ScrollTrigger && window.ScrollTrigger.refresh) window.ScrollTrigger.refresh();
+        }, { once: true });
       }
 
       frame.append(img);
