@@ -274,6 +274,24 @@
     });
   }
 
+  /* Once a memory card has revealed, nothing may hide it again.
+     `.rv` starts at opacity 0 and ScrollTrigger tweens it to 1. Because every
+     photo load triggers ScrollTrigger.refresh(), a tween that is measured
+     mid-flight can be left on its *start* value — so a card the visitor had
+     already reached could silently go back to opacity 0 and leave the chapter
+     blank. Dropping `.rv` removes the opacity:0 basis rule, and the explicit
+     end values keep GSAP from re-reading anything. Idempotent by design. */
+  function settleVisible(card) {
+    const bits = $$('.memory__label, .memory__frame, .memory__text, img', card);
+    bits.forEach(function (n) {
+      n.classList.remove('rv');
+      gsap.set(n, { opacity: 1, x: 0, y: 0, scale: 1, clipPath: 'inset(0% 0% 0% 0%)' });
+    });
+    const st = $('.memory__stage', card);
+    if (st) gsap.set(st, { opacity: 1 });
+    card.dataset.settled = '1';
+  }
+
   function memories() {
     const cards = $$('.memory');
     const total = cards.length;
@@ -301,26 +319,39 @@
       }
       to.ease = 'power3.out';
 
+      /* The reveal is a one-shot entrance, so it must always settle on the
+         visible end state. On completion the `.rv` class is dropped and the
+         end values are re-asserted, which means no later ScrollTrigger
+         refresh can park this card at opacity 0. Anything that starts hidden
+         must end explicitly visible. */
       const tl = gsap.timeline({
         defaults: { ease: 'power3.out' },
         scrollTrigger: {
-          trigger: m, start: 'top 68%', once: true,
+          trigger: m, start: 'top 82%', once: true,
           onEnter: function () { loadMediaIn(m); }
-        }
+        },
+        onComplete: function () { settleVisible(m); }
       });
       if (label) tl.fromTo(label, { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: D(0.9) });
       tl.fromTo(frame, { opacity: 0 }, { opacity: 1, duration: D(1.4) }, label ? '-=0.65' : 0)
         .fromTo(imgs, from, to, '<')
-        .fromTo(text,  { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: D(1.1) }, '-=0.85');
+        .fromTo(text, { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: D(1.1) }, '-=0.85');
 
       if (!REDUCED) {
+        /* Drift only — deliberately no opacity here.
+           This used to fade the whole stage to opacity 0 as the card left.
+           Photo downloads each fire ScrollTrigger.refresh(), and when a scrub
+           tween is re-measured mid-flight it can latch at its end value: the
+           card stayed at opacity 0 for good, so the photo chapter (and the
+           same cards when scrolling back up) rendered as empty space. A
+           translation can never hide content, so drift is safe. */
         gsap.fromTo(frame, { y: 26 }, {
           y: -26, ease: 'none',
           scrollTrigger: { trigger: m, start: 'top bottom', end: 'bottom top', scrub: 0.7 }
         });
-        gsap.to(stage, {
-          opacity: 0, y: -34, scale: 0.975, ease: 'none',
-          scrollTrigger: { trigger: m, start: 'bottom 58%', end: 'bottom 4%', scrub: 0.5 }
+        gsap.fromTo(stage, { y: 0 }, {
+          y: -28, ease: 'none',
+          scrollTrigger: { trigger: m, start: 'bottom 70%', end: 'bottom 10%', scrub: 0.5 }
         });
       }
 
@@ -345,27 +376,36 @@
       cards.forEach(function (m) {
         const r = m.getBoundingClientRect();
         if (r.top > vh * 0.92) return;          /* still well below: leave it */
-
-        const shown = ['.memory__label', '.memory__frame', '.memory__text'];
-        shown.forEach(function (sel) {
-          const n = $(sel, m);
-          if (!n) return;
-          if (parseFloat(getComputedStyle(n).opacity) > 0.9) return;
-          gsap.set(n, { opacity: 1, y: 0 });
-        });
-
-        const st = $('.memory__stage', m);
-        if (st && parseFloat(getComputedStyle(st).opacity) < 0.9) {
-          gsap.set(st, { opacity: 1, y: 0, scale: 1 });
-        }
-
-        $$('img', m).forEach(function (img) {
-          if (parseFloat(getComputedStyle(img).opacity) > 0.9 &&
-              getComputedStyle(img).clipPath === 'none') return;
-          gsap.set(img, { opacity: 1, scale: 1, x: 0, clipPath: 'inset(0% 0% 0% 0%)' });
-        });
+        settleVisible(m);
       });
     }
+
+    /* Independently of any trigger, a card that is sitting inside the
+       viewport is meant to be read — so it must be visible. This runs on
+       scroll and resize and is the final guarantee that the chapter can
+       never be scrolled past as empty space. */
+    function reconcileVisible() {
+      const vh = window.innerHeight || 1;
+      cards.forEach(function (m) {
+        const r = m.getBoundingClientRect();
+        const onScreen = r.bottom > vh * 0.12 && r.top < vh * 0.88;
+        if (!onScreen) return;
+        const st = $('.memory__stage', m);
+        const hidden = st && parseFloat(getComputedStyle(st).opacity) < 0.85;
+        const rvLeft = !!$('.memory__text.rv', m) || !!$('.memory__frame.rv', m);
+        if (hidden || rvLeft) settleVisible(m);
+      });
+    }
+    let reconcileRaf = 0;
+    function queueReconcile() {
+      if (reconcileRaf) return;
+      reconcileRaf = requestAnimationFrame(function () {
+        reconcileRaf = 0;
+        reconcileVisible();
+      });
+    }
+    window.addEventListener('scroll', queueReconcile, { passive: true });
+    window.addEventListener('resize', queueReconcile, { passive: true });
 
     cards.forEach(function (m) {
       const frame = $('.memory__frame', m);

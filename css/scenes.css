@@ -176,7 +176,11 @@
 .memory__frame.is-sized {
   width: 100%;
   aspect-ratio: var(--ph-ratio, 3 / 4);
-  max-height: min(58svh, 640px);
+  /* `height` must stay auto. With a max-height cap and width:100%, a tall
+     portrait photo hits the cap and the *width* shrinks to fit the ratio,
+     which left short landscape cards with a stubby, half-empty frame. Let the
+     ratio drive both axes and cap the photo itself instead. */
+  height: auto;
   align-items: center;
   border-radius: 4px;
 }
@@ -188,7 +192,7 @@
 }
 .memory__frame img {
   position: relative; z-index: 1;
-  max-height: min(58svh, 640px);
+  max-height: min(62svh, 700px);
   width: auto; max-width: 100%;
   /* height:auto + the width/height attributes written by scenes.js let the
      browser reserve the photo's real box from the first paint. Without them
