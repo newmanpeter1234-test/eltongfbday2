@@ -164,6 +164,11 @@ const Scenes = (function () {
         img.height = item.height;
         frame.classList.add('is-sized');
         frame.style.setProperty('--ph-ratio', item.width + ' / ' + item.height);
+        /* Numeric ratio, so CSS can cap the frame's *height* and derive the
+           width from it. Multiplying a length by this number keeps portrait
+           photos inside the viewport instead of running off the bottom of a
+           phone screen. */
+        frame.style.setProperty('--ph-ar', (item.width / item.height).toFixed(6));
       }
       if (i < 2) {
         img.loading = 'eager';

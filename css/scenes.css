@@ -27,15 +27,22 @@
   letter-spacing: .44em;
   text-transform: uppercase;
   color: var(--faint);
-  animation: whisperIn 2.6s var(--ease-out) .5s both;
+  opacity: 0;
 }
+.is-booted .whisper { animation: whisperIn 2.6s var(--ease-out) .15s both; }
 @keyframes whisperIn { from{opacity:0; letter-spacing:.7em} to{opacity:1} }
 
-.overlay--intro .gift-slot { animation: giftIn 2.4s var(--ease-out) 1.5s both; }
-@keyframes giftIn { from{opacity:0; transform:translateY(26px) scale(.94)} to{opacity:1} }
+/* The opening beat waits for the loading screen to lift. These are gated on
+   `is-booted`, so the gift, hint and skip appear for the visitor instead of
+   playing out unseen behind the curtain while assets download. */
+.overlay--intro .gift-slot { opacity: 0; }
+.overlay--intro .tap-hint { opacity: 0; }
+.overlay--intro .skip { opacity: 0; }
 
-.overlay--intro .tap-hint { animation: fadeUp 1.6s var(--ease-out) 2.9s both; }
-.overlay--intro .skip { animation: fadeUpSkip 1.2s ease 4.4s both; }
+.is-booted .overlay--intro .gift-slot  { animation: giftIn 2.4s var(--ease-out) .7s both; }
+.is-booted .overlay--intro .tap-hint   { animation: fadeUp 1.6s var(--ease-out) 2.1s both; }
+.is-booted .overlay--intro .skip       { animation: fadeUpSkip 1.2s ease 3.6s both; }
+@keyframes giftIn { from{opacity:0; transform:translateY(26px) scale(.94)} to{opacity:1} }
 @keyframes fadeUp { from{opacity:0; transform:translateY(14px)} to{opacity:1} }
 @keyframes fadeUpSkip { from{opacity:0} to{opacity:.9} }
 
@@ -173,14 +180,16 @@
    width/height). `width` must stay definite for aspect-ratio to resolve, so a
    not-yet-downloaded photo can no longer collapse to zero height and drag
    every card below it out of position. */
+/* The frame takes the photo's own shape, but is capped so a portrait can never
+   fill a whole phone screen. The width is *derived* from that capped height
+   (cap x aspect-ratio), so the box ends up exactly as tall as the picture
+   inside it — no half-empty frame, no letterboxing, and no card that runs off
+   the bottom of a small screen. `--ph-ar` is written by scenes.js. */
 .memory__frame.is-sized {
-  width: 100%;
-  aspect-ratio: var(--ph-ratio, 3 / 4);
-  /* `height` must stay auto. With a max-height cap and width:100%, a tall
-     portrait photo hits the cap and the *width* shrinks to fit the ratio,
-     which left short landscape cards with a stubby, half-empty frame. Let the
-     ratio drive both axes and cap the photo itself instead. */
+  width: min(100%, calc(var(--photo-cap, 52svh) * var(--ph-ar, 0.75)));
   height: auto;
+  max-width: 100%;
+  aspect-ratio: var(--ph-ratio, 3 / 4);
   align-items: center;
   border-radius: 4px;
 }
@@ -192,15 +201,15 @@
 }
 .memory__frame img {
   position: relative; z-index: 1;
-  max-height: min(62svh, 700px);
-  width: auto; max-width: 100%;
-  /* height:auto + the width/height attributes written by scenes.js let the
-     browser reserve the photo's real box from the first paint. Without them
-     the <img> was 0x0 until the file arrived, so every following card sat
-     hundreds of pixels too high; ScrollTrigger measured those wrong offsets
-     at setup and the reveal for the cards below stayed at opacity:0 — the
-     chapter looked empty. Reserving the box means the layout never shifts. */
-  height: auto;
+  /* The frame already carries the photo's exact shape, so the image simply
+     fills it. The width/height attributes written by scenes.js are what let
+     the browser reserve that box before the file arrives — without them the
+     <img> was 0x0 until download, every later card sat too high, and the
+     reveals never fired. */
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   border-radius: 4px;
   box-shadow:
     0 1px 0 rgba(255,255,255,.1) inset,
@@ -261,12 +270,10 @@
   scale: var(--orient-scale, 1 1);
   object-fit: var(--orient-fit, contain);
 }
-/* A quarter turn makes the painted box taller/wider than the file, so let the
-   frame size itself from the rotated image instead of clipping it. */
-.memory__frame img.is-oriented {
-  max-height: min(62svh, 660px);
-  width: auto;
-}
+/* A turned photo needs a little more room so the rotated corners never clip,
+   but the frame still owns the box — its aspect ratio comes from config.js, so
+   for a sideways file set width/height to the *displayed* orientation. */
+.memory__frame.is-sized img.is-oriented { object-fit: var(--orient-fit, contain); }
 .memory__text { max-width:34rem; text-align:center; }
 .memory__title {
   font-family: var(--font-display);
@@ -283,6 +290,8 @@
 }
 
 @media (min-width: 900px){
+  /* Desktop has the height to spare — let the photos breathe. */
+  .memory__frame.is-sized { --photo-cap: min(62svh, 34rem); }
   .memory:nth-child(3n) .memory__stage {
     display: grid;
     grid-template-columns: minmax(0, auto) minmax(14rem, 22rem);
@@ -295,9 +304,11 @@
   }
   .memory:nth-child(3n) .memory__frame {
     grid-column: 1; grid-row: 1 / span 2;
+    /* Cap by width here, not max-width: the frame derives its own width from
+       the height cap, and max-width would clip it after the fact. */
+    --photo-cap: min(62svh, 34rem);
     max-width: min(52vw, 38rem);
   }
-  .memory:nth-child(3n) .memory__frame img { max-height:min(70svh, 700px); }
   .memory:nth-child(3n) .memory__label { grid-column:2; grid-row:1; align-self:end; margin-bottom:.9rem; }
   .memory:nth-child(3n) .memory__text { grid-column:2; grid-row:2; align-self:start; text-align:left; }
 }

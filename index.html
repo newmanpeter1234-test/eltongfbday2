@@ -26,8 +26,19 @@
 
 <body>
 
-<!-- Quiet holding boot screen -->
-<div id="boot" class="boot" aria-hidden="true"><span class="boot__dot"></span></div>
+<!-- Loading screen: the initials, a whisper, and real progress.
+     aria-hidden because it is a transient curtain over the real story —
+     announcing the changing percentage would only flood a screen reader. -->
+<div id="boot" class="boot" aria-hidden="true">
+  <div class="boot__inner">
+    <p class="boot__mark">
+      <span class="boot__initial">E</span><span class="boot__heart" aria-hidden="true">&#9825;</span><span class="boot__initial">A</span>
+    </p>
+    <p class="boot__tag">A birthday story for Anziya</p>
+    <p class="boot__count"><span id="bootPct">0</span><span class="boot__pctsign">%</span></p>
+    <span class="boot__bar" aria-hidden="true"><i id="bootBar"></i></span>
+  </div>
+</div>
 
 <!-- Ambient background: velvet gradients + particles -->
 <div class="bg" aria-hidden="true"></div>

@@ -51,6 +51,19 @@ size it can read like a **V**. Pick a different face with **`nameFont`** in
 To compare them all without editing anything, add `?font=` to the URL —
 e.g. `index.html?font=prata`. No rebuild needed; just reload.
 
+### The loading screen
+Opening the site shows a velvet curtain with the initials `E ♡ A`, the line
+"A birthday story for Anziya", a live percentage and a hairline that fills.
+
+The number is real, not decorative. It rises as fonts resolve and as the first
+few photos arrive. It always finishes: a stalled request is abandoned after a
+few seconds, and there is a hard cut-off plus a CSS-only failsafe, so a bad
+connection can never leave anyone stuck on the curtain.
+
+To change the words or the initials, edit the `#boot` block near the top of
+`index.html`. Its look lives under `/* ── Loading screen ── */` in
+`css/style.css`.
+
 ### How photos load (and why they never leave a blank gap)
 Each entry in the `photos` array records the file's `width` and `height`:
 
@@ -70,8 +83,14 @@ card out of position after ScrollTrigger had already measured the page — the
 photo chapters then scrolled past as empty space. With the box reserved the
 layout never moves, and each frame shimmers softly until its photo paints.
 
+Each frame is also capped (`--photo-cap`, set per breakpoint in the CSS) so a
+single portrait can never fill a whole phone screen — the card always keeps its
+label above and its caption below. That is what keeps the chapter comfortable to
+read on a small handset.
+
 **If you swap in a new photo, update `width` / `height` to match it.** Otherwise
-the reserved box has the wrong shape and the photo will letterbox inside it.
+the reserved box has the wrong shape and the photo will be cropped or squeezed.
+For a photo you have told the page to rotate, give the *displayed* dimensions.
 Keep files around 1600 px on the long edge — that is sharp on a phone at 2×
 and keeps each card a couple of hundred kilobytes.
 

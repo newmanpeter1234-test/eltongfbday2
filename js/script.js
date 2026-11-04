@@ -337,23 +337,13 @@
         .fromTo(imgs, from, to, '<')
         .fromTo(text, { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: D(1.1) }, '-=0.85');
 
-      if (!REDUCED) {
-        /* Drift only — deliberately no opacity here.
-           This used to fade the whole stage to opacity 0 as the card left.
-           Photo downloads each fire ScrollTrigger.refresh(), and when a scrub
-           tween is re-measured mid-flight it can latch at its end value: the
-           card stayed at opacity 0 for good, so the photo chapter (and the
-           same cards when scrolling back up) rendered as empty space. A
-           translation can never hide content, so drift is safe. */
-        gsap.fromTo(frame, { y: 26 }, {
-          y: -26, ease: 'none',
-          scrollTrigger: { trigger: m, start: 'top bottom', end: 'bottom top', scrub: 0.7 }
-        });
-        gsap.fromTo(stage, { y: 0 }, {
-          y: -28, ease: 'none',
-          scrollTrigger: { trigger: m, start: 'bottom 70%', end: 'bottom 10%', scrub: 0.5 }
-        });
-      }
+      /* No parallax drift on the photos.
+         There used to be a scrubbed `y` on both the frame and the stage, which
+         slid each photo ~50px upward while it scrolled past. On the opening
+         cards of the chapter that movement is very obvious, and it read as the
+         images "jumping" — so the photos now stay put and only the entrance
+         animation plays. Opacity is deliberately absent for the same reason it
+         always was: a scroll animation must never be able to hide content. */
 
       ScrollTrigger.create({
         trigger: m, start: 'top 60%', end: 'bottom 40%',
@@ -458,12 +448,9 @@
       }
       gsap.set(card, { opacity: 1 });
 
-      if (!REDUCED) {
-        gsap.fromTo(frame, { y: 18 }, {
-          y: -18, ease: 'none',
-          scrollTrigger: { trigger: card, start: 'top bottom', end: 'bottom top', scrub: 0.7 }
-        });
-      }
+      /* Kept deliberately still — same reasoning as the photo cards: a scrubbed
+         translation makes the media crawl while the page scrolls, and the
+         entrance animation already carries the motion. */
     });
   }
 
@@ -896,13 +883,109 @@
       intro.classList.add('is-active');
     }
 
-    const reveal = function () { root.classList.add('is-booted'); };
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(reveal);
-    } else {
-      reveal();
+    startLoader();
+  }
+
+  /* ══ Loading Screen ══════════════════════════════════════════════════════
+     The percentage tracks real work: fonts, then the photos that the opening
+     chapter needs. It eases forward smoothly and always finishes — a stalled
+     request is waited on, never allowed to hold the entrance hostage. */
+  function startLoader() {
+    const pctEl  = $('#bootPct');
+    const barEl  = $('#bootBar');
+    const bootEl = $('#boot');
+    if (!pctEl || !barEl || !bootEl) {
+      root.classList.add('is-booted');
+      return;
     }
-    setTimeout(reveal, 700);
+
+    let shown = 0;        /* what the visitor sees */
+    let target = 0;       /* what has actually completed */
+    let finished = false;
+
+    function paint(v) {
+      pctEl.textContent = String(Math.round(v));
+      barEl.style.width = v + '%';
+    }
+
+    /* Ease towards the real target so the number never jumps or backtracks —
+       and hide the curtain only once the count has visibly reached 100, so it
+       reads as a real measurement rather than a decoration. */
+    let hiding = false;
+    const tick = setInterval(function () {
+      if (shown < target) {
+        shown += Math.max(0.9, (target - shown) * 0.16);
+        if (shown > target) shown = target;
+        paint(shown);
+      }
+      if (finished && shown >= 99.5 && !hiding) {
+        hiding = true;
+        clearInterval(tick);
+        paint(100);
+        setTimeout(function () {
+          root.classList.add('is-booted');
+          bootEl.setAttribute('aria-hidden', 'true');
+        }, 380);
+      }
+    }, 40);
+
+    /* Never let a slow or dead request trap the visitor. */
+    const bail = setTimeout(finish, 9000);
+
+    function finish() {
+      if (finished) return;
+      finished = true;
+      clearTimeout(bail);
+      target = 100;
+      /* Hard stop: if the easing somehow cannot settle, drop the curtain
+         anyway rather than leaving anyone staring at the loader. */
+      setTimeout(function () {
+        if (hiding) return;
+        hiding = true;
+        clearInterval(tick);
+        paint(100);
+        root.classList.add('is-booted');
+        bootEl.setAttribute('aria-hidden', 'true');
+      }, 2200);
+    }
+
+    /* Phase 1 — fonts (they decide the size of every line on the page). */
+    const fonts = (document.fonts && document.fonts.ready)
+      ? document.fonts.ready
+      : Promise.resolve();
+    fonts.then(function () { target = Math.max(target, 40); },
+               function () { target = Math.max(target, 40); });
+
+    /* Phase 2 — the photos that make up the first view of the story. scenes.js
+       gives a real `src` only to the first two cards (the rest are lazy), so
+       those are exactly the ones worth waiting for. The remainder stream in
+       behind their placeholders, which keeps this phase short. On a slow link
+       we stop waiting after a few seconds: the curtain must never become the
+       experience. */
+    const eager = $$('.memory img[src]');
+    let done = 0;
+    const total = eager.length;
+    const bump = function () {
+      if (finished) return;
+      done++;
+      target = Math.max(target, 40 + (done / Math.max(total, 1)) * 55);
+      if (done >= total) { target = 100; finish(); }
+    };
+
+    if (!total) {
+      /* Nothing to preload — go straight out after fonts. */
+      fonts.then(finish, finish);
+    } else {
+      eager.forEach(function (img) {
+        if (img.complete && img.naturalWidth) { bump(); return; }
+        img.addEventListener('load', bump, { once: true });
+        img.addEventListener('error', bump, { once: true });
+      });
+      /* Whatever has arrived by now is enough to start the story. */
+      setTimeout(function () {
+        if (!finished) { target = Math.max(target, 92); finish(); }
+      }, 3800);
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
