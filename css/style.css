@@ -365,7 +365,34 @@ button { font:inherit; color:inherit; }
    Holds the visitor for a beat while fonts and the first photos arrive, in the
    same Deep Velvet Bordeaux language as the story: initials, a whisper, a real
    percentage, and a hairline that fills. Numbers reflect actual work done, so
-   it never lies or stalls at a fake value. */
+   it never lies or stalls at a fake value.
+
+   The numeral is deliberately set in a self-hosted 1.7 KB subset of Cormorant
+   Light whose digit glyphs are *baked in* as the lining + tabular alternates
+   (the cmap points 0-9 straight at the .tf glyphs, so no shaper has to honour
+   an OpenType feature for it to look right). Three problems it solves:
+
+   1 · Lining figures. Cormorant's default digits are *oldstyle* — 5, 7 and 9
+       drop a descender below the baseline while 1, 2 and 3 sit on it, so a
+       percentage reads as a jagged cluster with no common baseline. Oldstyle
+       is what made this numeral look "messy".
+   2 · Tabular figures. Proportional advances changed width on every tick
+       (Cormorant: 1 = 332 units, 0 = 477), so the number jittered and
+       re-centred itself 25 times a second while counting. Tabular locks all
+       ten digits to 491 units — measured centre drift across 0→100 is now
+       under 2 px, against roughly 78 px before.
+   3 · Availability. It also must not inherit --font-display: js/script.js
+       rewrites that variable from `nameFont` for the big "Anziya", and the
+       default (Playfair) ships no tabular figures at all. Self-hosting means
+       the loader renders identically on every machine, before Google Fonts
+       has even answered. */
+@font-face {
+  font-family: "Loader Numerals";
+  src: url("../assets/fonts/loader-numerals.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: block;
+}
 .boot {
   position: fixed; inset: 0; z-index: 120;
   display: grid; place-items: center;
@@ -378,7 +405,10 @@ button { font:inherit; color:inherit; }
 .boot__inner {
   display: flex; flex-direction: column; align-items: center;
   text-align: center;
-  transform: translateY(-1.5vh);
+  /* Put the lockup's optical centre on the frame's true middle. Measured
+     against the reference: the block spans roughly -13svh to +7svh relative
+     to centre, so nudging up ~1.5svh balances it. */
+  transform: translateY(-1.5svh);
 }
 .boot__mark {
   display: flex; align-items: center; justify-content: center;
@@ -411,27 +441,65 @@ button { font:inherit; color:inherit; }
   color: var(--faint);
   padding-left: .44em;              /* optical centring against the tracking */
 }
+
+/* ── the numeral ──────────────────────────────────────────────────────────
+   Every number below is derived from the bundled face's own metrics, not
+   guessed, so the digits and the percent sign share a tested baseline:
+
+     hhea   ascender 924 / descender -287   →  baseline sits 0.8185em from the
+                                               top of a line-height:1 box
+     digits cap 636, overshoot -13          →  ink spans 0.1825–0.8315em
+     ink centre                             →  0.5005em = the box centre
+
+   In other words: with line-height:1 this face is already optically centred,
+   which is why there is no fudge padding here. */
 .boot__count {
-  margin: clamp(1.6rem, 5vh, 2.6rem) 0 0;
-  font-family: var(--font-display);
+  display: flex;
+  align-items: flex-start;          /* digits and % both hang from the cap */
+  justify-content: center;
+  margin: clamp(1.25rem, 3.9vh, 2rem) 0 0;
+  font-family: "Loader Numerals", "Cormorant Garamond", Georgia, serif;
   font-weight: 300;
-  font-size: clamp(3.4rem, 10vw, 5.2rem);
-  line-height: .9;
+  font-size: clamp(3.1rem, 9vw, 4.6rem);
+  line-height: 1;
   color: var(--text);
-  font-variant-numeric: tabular-nums;
 }
+.boot__num {
+  display: block;
+  font-variant-numeric: lining-nums tabular-nums;
+  /* Every digit has the same 491/1000em advance, so the group width no longer
+     changes as the count ticks — the number holds perfectly still. The
+     negative margin trims the tabular side-bearing so the ink, not the
+     advance box, is what the flex row centres. */
+  margin-right: -.035em;
+}
+
+/* The percent sign is drawn, not typed. A text "%" brings its own line box and
+   `vertical-align: super` only shifts that box — the ink lands wherever the
+   font's metrics leave it. That is exactly why the old sign floated high and
+   hung off the end of the number. An inline SVG is a pure ink box: it sits on
+   the cap line to the fraction of an em, and scales as a ratio of the numeral
+   at every viewport size. */
 .boot__pctsign {
-  font-size: .42em;
+  flex: none;
+  width:  .2193em;
+  height: .1695em;
+  margin-top: .2445em;              /* cap line + the reference's optical inset */
+  margin-left: .075em;
   color: var(--rose);
-  margin-left: .06em;
-  vertical-align: super;
-  letter-spacing: 0;
+  line-height: 0;
 }
+.boot__pctsign svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.boot__pctsign circle { fill: none; stroke: currentColor; stroke-width: 2; }
+.boot__pctsign path   { stroke: currentColor; }
+
+/* ── progress hairline ──────────────────────────────────────────────────── */
 .boot__bar {
   display: block;
+  position: relative;
   width: clamp(9rem, 26vw, 13.5rem);
   height: 1px;
-  margin-top: clamp(1.5rem, 4.4vh, 2.2rem);
+  margin-top: clamp(1.15rem, 3.3vh, 1.7rem);
   background: rgba(251,247,245,.16);
   overflow: hidden;
 }

@@ -64,6 +64,21 @@ To change the words or the initials, edit the `#boot` block near the top of
 `index.html`. Its look lives under `/* ── Loading screen ── */` in
 `css/style.css`.
 
+Two details in that block are load-bearing, so leave them alone unless you mean
+to change them:
+
+- **The numeral has its own font** — `assets/fonts/loader-numerals.woff2`, a
+  1.7 KB subset of Cormorant Light. Its digit glyphs are baked in as the
+  *lining, tabular* forms. Lining figures give every digit a common baseline
+  (the default oldstyle 5, 7 and 9 hang below it, which reads as messy), and
+  tabular figures give all ten the same advance width, so the number does not
+  jitter or re-centre while it counts. It is self-hosted and preloaded so the
+  curtain renders identically on every machine, before Google Fonts answers.
+- **The `%` is an SVG, not a `%` character.** A text percent sign drags its own
+  line box around and `vertical-align: super` only moves that box, so the ink
+  landed wherever the font's metrics left it. The SVG is pure ink: it aligns to
+  the digit cap and scales as a fraction of the numeral at every size.
+
 ### How photos load (and why they never leave a blank gap)
 Each entry in the `photos` array records the file's `width` and `height`:
 
